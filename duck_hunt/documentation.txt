@@ -1,0 +1,152 @@
+ ###############################################################################
+#
+# Duck Hunt v2.11  ©2015-2016 Menz Agitat
+# Documentation
+#
+ ###############################################################################
+
+
+########  DESCRIPTION
+
+Duck Hunt est un FPS pour IRC.
+
+De temps en temps, un canard s'envole et les joueurs doivent l'abattre le plus
+rapidement possible.
+
+
+
+########  FONCTIONNALITÉS
+
+- Support multilingue (packs de langue français et anglais fournis).
+- Très nombreux paramètres de configuration.
+- Possibilité de spécifier des heures durant lesquelles les canards dorment.
+- Les canards s'échappent au bout d'un moment ou lorsqu'ils sont effrayés.
+- Les canards peuvent être générés aléatoiement afin de déjouer la détection par
+	les HL et les scripts.
+- Super-canards plus difficiles à tuer et rapportant beaucoup d'xp à celui qui
+	parvient à les avoir.
+- Gestion des munitions et du nombre de chargeurs, le joueur doit penser à
+	recharger son fusil.
+- Accidents de chasse mettant en jeu la vie des autres chasseurs.
+- Les risques d'accident augmentent s'il y plus de monde sur le chan.
+- Les fusils peuvent être confisqués automatiquement lorsque le chasseur commet
+	une erreur.
+- Les balles peuvent ricocher.
+- Gain et perte de points d'xp, pénalités croissantes avec le niveau.
+- 40 niveaux de progression basés sur l'xp, auxquels sont associés 40 titres.
+- Karma (parce qu'il y a les bons chasseurs et les mauvais chasseurs).
+- Statistiques améliorables (précision, armure, déflexion, risque d'enrayement,
+	nombre et taille des chargeurs).
+- Possibilité de modifier facilement la table de progression et même d'ajouter
+	de nouveaux niveaux.
+- Magasin proposant un choix de 23 objets spéciaux à acheter contre de l'xp.
+- Vous pourrez parfois trouver des choses intéressantes en fouillant les
+	buissons autour d'un canard que vous avez abattu.
+- La restitution des armes confisquées et le réapprovisionnement en munitions
+	sont automatisés.
+- Possibilité de désarmer un joueur de façon temporaire ou permanente.
+- Suivi des changements de nick, gestion des conflits, protection de niveau 1
+	contre les tentatives de vol de scores.
+- Création de logs datés afin de suivre avec précision l'activité des chasseurs.
+- Exportation des données et des statistiques des joueurs dans un tableau,
+	possibilité de tri selon 34 critères différents.
+- Nombreuses commandes d'administration.
+- Backup quotidien de la base de données.
+- Antiflood individuel / global.
+
+... et plus encore !
+
+
+
+########  ACTIVATION
+
+Pour activer Duck Hunt sur un chan, vous devez taper ceci en partyline de
+l'Eggdrop :
+	.chanset #NomDuChan +DuckHunt
+et ceci pour le désactiver :
+	.chanset #NomDuChan -DuckHunt
+Attention aux majuscules !
+
+
+
+########  COMMANDES ET SYNTAXE
+
+### COMMANDES DES JOUEURS
+
+!bang
+Tire un coup de fusil.
+
+!reload
+Recharge ou décoince le fusil s'il est enrayé.
+
+!lastduck
+Affiche le temps écoulé depuis le dernier envol de canard.
+
+!duckstats [nick]
+Affiche les statistiques d'un utilisateur.
+
+!shop [id [cible]]
+Affiche une liste des objets qu'il est possible d'acheter ou effectue un achat
+si "id" est spécifié.
+Certains objets nécessitent qu'un joueur cible soit aussi spécifié.
+
+
+### COMMANDES D'ADMINISTRATION
+
+lastduck <chan>
+Affiche le temps écoulé depuis le dernier envol de canard.
+(Commande par message privé à l'Eggdrop)
+
+ducklaunch <chan> [golden_duck]
+Déclenche l'envol d'un canard sur le chan spécifié.
+"golden_duck" détermine s'il s'agit d'un super-canard ou d'un canard normal et
+peut valoir 0 (normal) ou 1 (super-canard).
+Si "golden_duck" est omis, il vaudra 0 par défaut.
+(Commande par message privé à l'Eggdrop)
+
+duckplanning <chan>
+Affiche la planification des envols de canards pour la journée en cours sur le
+chan spécifié.
+(Commande par message privé à l'Eggdrop)
+
+duckreplanning <chan>
+Recalcule une planification différente pour la journée en cours sur le chan
+spécifié.
+(Commande par message privé à l'Eggdrop)
+
+ducklist <chan> [argument de recherche]
+Affiche la liste des profils utilisateur sur le chan spécifié ou effectue une
+recherche dans celle-ci.
+(Commande par message privé à l'Eggdrop)
+
+duckrename <chan> <ancien nick> <nouveau nick>
+Renomme le profil de statistiques d'un utilisateur.
+(Commande par message privé à l'Eggdrop)
+
+duckfusion <chan> <nick destination> <nick source 1> [nick source 2] [...]
+Fusionne les statistiques de plusieurs profils utilisateur.
+Les statistiques de tous les nicks source seront fusionnées dans le nick
+destination.
+(Commande par message privé à l'Eggdrop)
+
+duckdelete <chan> <nick>
+Supprime le profil de statistiques d'un utilisateur.
+(Commande par message privé à l'Eggdrop)
+
+!unarm [-static] <nick>
+Désarme un joueur.
+Le paramètre -static permet de s'assurer qu'il ne sera pas réarmé lors de la
+prochaine restitution automatique des armes.
+
+!rearm <nick>
+Rend son fusil à un joueur qui a été désarmé automatiquement ou manuellement.
+
+duckexport [critère de tri]
+Exporte les données des joueurs sous forme de tableau dans un fichier texte.
+Le critère de tri peut valoir nick, last_activity, xp, level, xp_lvl_up, gun,
+ammo, max_ammo, ammo_clips, max_clips, accuracy, effective_accuracy, deflection,
+defense, jamming, jammed, jammed_nbr, confisc, ducks, golden_ducks, missed,
+empty, accidents, wild_shots, total_ammo, shot_at, neutralized, deflected,
+deaths, best_time, average_reflex_time, karma, rank ou items.
+Si aucun critère de tri n'est spécifié, le tableau sera trié par nick.
+(Commande par message privé à l'Eggdrop)

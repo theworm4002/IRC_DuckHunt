@@ -1,0 +1,126 @@
+ ###############################################################################
+#
+# Duck Hunt v2.11  ©2015-2016 Menz Agitat
+# Historique des versions
+#
+ ###############################################################################
+
+
+1.0
+	- 1ère version
+
+2.0
+	- Correction : ajout d'un système empêchant un lancement multiple de canards
+		si method = 2 et qu'un timer drift de l'Eggdrop se produit à une heure
+		d'envol planifié.
+	- Correction : le message d'erreur affiché était incorrect si le package
+		msgcat n'était pas trouvé.
+	- Correction : le script limitait les envols de canards à 24 par jour maximum
+		si method = 2.
+	- Correction : dans certaines circonstances, la fusion de statistiques ne
+		conservait pas le meilleur temps.
+	- Correction : la fusion de statistiques calculait le nombre de munitions
+		restantes de manière incorrecte.
+	- Correction : l'utilisation de la commande duckreplanning provoquait une
+		erreur si la langue du script était définie en anglais.
+	- Correction : une ligne présente sur le rapport généré par la commande
+		duckexport avait été oubliée dans le pack de langue et restait en français
+		quelle que soit la langue choisie.
+	- Correction : "déflect." a été changé en "deflect" dans le pack de langue
+		anglais. Ce mot est utilisé dans le rapport généré par la commande
+		duckexport.
+	- Correction : la planification / dé-planification automatique des heures
+		d'envol ne fonctionnait pas correctement si la casse n'était pas respectée
+		en définissant le flag DuckHunt sur un chan.
+	- Modification : les pénalités d'xp en cas de tir manqué / tir sauvage et
+		accident de chasse varient désormais selon le niveau du joueur.
+		Le réglage de ces valeurs se fait maintenant par le paramètre de
+		configuration level_grantings et les paramètres xp_miss, xp_wild_fire et
+		xp_accident ont disparu.
+	- Modification : les paramètres de configuration default_precision,
+		default_defense, default_deflection, default_weapon_jamming_odds,
+		default_ammos_in_clip et default_ammo_clips_per_day ont disparu, ces
+		réglages se font maintenant depuis le paramètre level_grantings.
+		Les paramètres de configuration unlimited_ammo_per_clip et
+		unlimited_ammo_clips ont été ajoutées afin de permettre des munitions
+		illimitées.
+	- Modification : la statistique "précision effective" a été renommée en
+		"efficacité des tirs" pour plus de précision quant à sa signification
+		réelle.
+	- Modification : le serveur est maintenant indiqué sur le tableau généré par
+		la commande duckexport.
+	- Modification : afin d'éviter le spoil, la colonne "titres" a été supprimée
+		de la table de progression dans le fichier table_de_progression.html.
+	- Modification : le paramètre de configuration cheat_prevention a été renommé
+		en hl_prevention.
+	- Modification : le tableau généré par la commande duckexport est désormais
+		trié par ordre alphabétique sur les nicks avant d'appliquer l'ordre de tri
+		souhaité.
+	- Modification : la variable de chan "lastduck" a été renommée en
+		"DuckHunt-LastDuck".
+	- Modification : afin de réduire les risques de dispersion des statistiques
+		des joueurs sur plusieurs nicks, le changement de nick d'un chasseur vers
+		un nick ne possédant pas de stats ne déclenche plus un transfert immédiat.
+	- Ajout : Super-canards apparaissant rarement, difficiles à tuer, impossibles
+		à effrayer, rapportant beaucoup d'xp à celui qui parvient à les tuer.
+		Une nouvelle statistique de chasse a été ajoutée pour les comptabiliser.
+		Veuillez noter que la syntaxe de la commande ducklaunch s'est enrichie afin
+		de permettre de lancer aussi des super-canards.
+	- Ajout : magasin avec un choix de 23 objets spéciaux à acheter contre de
+		l'xp.
+	- Ajout : vous pourrez parfois trouver des objets en fouillant les buissons
+		après avoir abattu un canard.
+	- Ajout : nouveau paramètre de configuration confiscation_enforcment_on_fusion
+		permettant d'activer / désactiver le système anti-contournement de
+		confiscation d'armes (voir explications dans le fichier .cfg).
+	- Ajout : nouveau paramètre de configuration xp_lucky_shot permettant de
+		définir un bonus d'xp en cas de "lucky shot".
+	- Ajout : nouveau paramètre de configuration blacklisted_handles permettant de
+		définir une liste de handles qui ne seront pas autorisés à utiliser les
+		commandes du jeu.
+	- Ajout : les logs du jeu sont maintenant beaucoup plus complets.
+	- Ajout : la date de la dernière activité de chaque joueur est désormais
+		enregistée et peut servir de critère de tri lors de l'exportation des stats
+		avec la commande duckexport.
+	- Ajout : un fond d'écran réalisé par Frédéric sur le thème du jeu a été ajouté.
+
+2.1
+	- Correction : dans le cas où un joueur possédait un détecteur de canards, les
+		transferts de stats en attente pour tous les joueurs sur tous les chans
+		étaient automatiquement traités.
+	- Correction : une entrée incomplète pouvait occasionnellement être créée pour
+		un joueur en raison d'un problème avec le fonctionnement du détecteur de
+		canards.
+	- Correction : un canard qui s'enfuyait provoquait parfois une erreur.
+	- Correction : erreur d'accord dans "1 point d'xp supplémentaires" avec un
+		trèfle à 4 feuilles +1
+	- Correction : une erreur se produisait lorsque plusieurs canards étaient en
+		vol et que certains étaient effrayés.
+	- Modification : le nom du joueur est désormais cité dans la notice envoyée
+		par le détecteur de canards afin d'avoir toutes les chances d'attirer son
+		attention.
+	- Modification : le type de munitions utilisé est désormais clairement indiqué
+		lorsqu'un super-canard est abattu.
+	- Modification : le type de munitions utilisé influence le bruit des tirs.
+		Par exemple, les munitions explosives feront *BOUM*.
+	- Modification : utiliser la commande !shop sans acheter ne met plus à jour
+		la date de dernière activité du joueur.
+	- Ajout : la mémoire des transferts de stats en attente est désormais écrite
+		dans un fichier afin de persister lors du rechargement du script ou au
+		redémarrage de l'Eggdrop.
+		Deux nouveaux paramètres de configuration ont été ajoutés à cet effet :
+		pending_transfers_file et pending_transfers_file_max_age.
+	- Ajout : nouveau paramètre de configuration successful_shots_scares_ducks
+		permettant de choisir si les tirs réussis doivent également effrayer les
+		canards en vol ou non.
+	- Ajout : nouveau paramètre de configuration decoys_can_attract_golden_ducks
+		vous permettant de choisir si les appeaux peuvent ou non attirer des
+		super-canards.
+	- Quelques optimisations mineures.
+
+2.11
+	- Correction : une erreur se produisait lors de l'utilisation de la commande
+		ducklaunch sur un chan ne possédant pas encore de statistiques dans la db.
+	- Modification : la longueur de certains messages a été réduite afin de
+		retarder le plus possible le phénomène de fake-lag lorsque beaucoups de
+		messages sont envoyés au serveur dans un court laps de temps.

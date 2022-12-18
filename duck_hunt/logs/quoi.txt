@@ -1,0 +1,1 @@
+Les logs de Duck Hunt seront automatiquement créés dans ce répertoire.

@@ -1,0 +1,1 @@
+La base de données de Duck Hunt sera automatiquement créée dans ce répertoire.
