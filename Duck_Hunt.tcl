@@ -15,7 +15,6 @@
 # d'id�es et la r�alisation du background inclus (duck_background.png).
 #
  ###############################################################################
-
 #
 # Description
 #
@@ -5000,6 +4999,7 @@ bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd2 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd3 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd4 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd5 ::DuckHunt::shoot
+bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd6 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::no_jizzing ::DuckHunt::no_jizz
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay2 ::DuckHunt::shoot_relay
