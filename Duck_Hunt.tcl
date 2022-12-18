@@ -2,6 +2,7 @@
 #
 # Duck Hunt
 # v2.11 (11/04/2016)  �2015-2016 Menz Agitat
+# v2.15 (12/18/22) Worm
 #
 # IRC: irc.epiknet.org  #boulets / #eggdrop
 #
@@ -532,10 +533,19 @@ proc ::DuckHunt::shoot_relay {nick host hand chan arg} {
 ### !jizz computertech : A player shoots. 
  ###############################################################################
 proc ::DuckHunt::no_jizz {nick host hand chan arg} {
+
+	set lower_nick [::tcl::string::tolower $nick]
+
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
 	if {
 		(![channel get $chan DuckHunt])
 		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($::DuckHunt::antiflood == 1)
+		|| (($canNickFlood == 1)
 		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::no_shooting_cmd $::DuckHunt::flood_reload])
 		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
 	} then {
@@ -555,10 +565,19 @@ proc ::DuckHunt::no_jizz {nick host hand chan arg} {
 ### !hate computertech : A player shoots. 
  ###############################################################################
 proc ::DuckHunt::no_shoot {nick host hand chan arg} {
+
+	set lower_nick [::tcl::string::tolower $nick]
+
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
 	if {
 		(![channel get $chan DuckHunt])
 		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($::DuckHunt::antiflood == 1)
+		|| (($canNickFlood == 1)
 		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::no_shooting_cmd $::DuckHunt::flood_reload])
 		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
 	} then {
@@ -992,10 +1011,19 @@ proc ::DuckHunt::no_shoot {nick host hand chan arg} {
 ### !bang : Un joueur tire.
  ###############################################################################
 proc ::DuckHunt::shoot {nick host hand chan arg} {
+
+	set lower_nick [::tcl::string::tolower $nick]
+
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
 	if {
 		(![channel get $chan DuckHunt])
 		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($::DuckHunt::antiflood == 1)
+		|| (($canNickFlood == 1)
 		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::shooting_cmd $::DuckHunt::flood_shoot])
 		|| ([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::shooting_cmd2 $::DuckHunt::flood_shoot])
 		|| ([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::shooting_cmd3 $::DuckHunt::flood_shoot])
@@ -1600,15 +1628,26 @@ proc ::DuckHunt::hit_a_duck {nick lower_nick chan lucky_shot output_method outpu
 					if { [set item_index [lindex [::DuckHunt::get_item_info $lower_nick $chan "3"] 0]] != -1 } {
 						::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [lreplace [::DuckHunt::get_data $lower_nick $chan "items"] $item_index $item_index]
 					}
-					# Si le joueur poss�de d�j� des munitions explosives, on les remplace.
-					if { [set item_index [lsearch -index 1 [::DuckHunt::get_data $lower_nick $chan "items"] "4"]] != -1 } {
+					# If the player already has explosive ammo, replace it.
+					# if { [set item_index [lsearch -index 1 [::DuckHunt::get_data $lower_nick $chan "items"] "4"]] != -1 } {
+					# 	::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [lreplace [::DuckHunt::get_data $lower_nick $chan "items"] $item_index $item_index]
+					# }
+					# ::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [concat [::DuckHunt::get_data $lower_nick $chan "items"] [list [list [expr {$current_time + 86400}] "3" "-"]]]
+					# # Message : "%s > En fouillant les buissons autour du canard, tu trouves des munitions AP ! Les d�g�ts de ton arme sont doubl�s pendant 24h."
+					# set drop_msg [::msgcat::mc m397 $nick]
+					# # Texte : "munitions AP"
+					# set loot [::msgcat::mc m409]
+					if { [set item_index [lsearch -index 1 [::DuckHunt::get_data $lower_nick $chan "items"] "4"]] == -1 } {
 						::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [lreplace [::DuckHunt::get_data $lower_nick $chan "items"] $item_index $item_index]
+						::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [concat [::DuckHunt::get_data $lower_nick $chan "items"] [list [list [expr {$current_time + 86400}] "3" "-"]]]
+						# Message : "%s > En fouillant les buissons autour du canard, tu trouves des munitions AP ! Les d�g�ts de ton arme sont doubl�s pendant 24h."
+						set drop_msg [::msgcat::mc m397 $nick]
+						# Texte : "munitions AP"
+						set loot [::msgcat::mc m409]
+					} else {
+						set drop_msg "[::msgcat::mc m397 $nick].... You already have explosive_ammo nevermind"
 					}
-					::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [concat [::DuckHunt::get_data $lower_nick $chan "items"] [list [list [expr {$current_time + 86400}] "3" "-"]]]
-					# Message : "%s > En fouillant les buissons autour du canard, tu trouves des munitions AP ! Les d�g�ts de ton arme sont doubl�s pendant 24h."
-					set drop_msg [::msgcat::mc m397 $nick]
-					# Texte : "munitions AP"
-					set loot [::msgcat::mc m409]
+					
 				}
 				"explosive_ammo" {
 					if { [set item_index [lindex [::DuckHunt::get_item_info $lower_nick $chan "4"] 0]] != -1 } {
@@ -1828,10 +1867,19 @@ proc ::DuckHunt::hit_a_duck {nick lower_nick chan lucky_shot output_method outpu
 ### !reload : Recharge ou d�coince son arme.
  ###############################################################################
 proc ::DuckHunt::reload_gun {nick host hand chan arg} {
+
+	set lower_nick [::tcl::string::tolower $nick]
+
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
 	if {
 		(![channel get $chan DuckHunt])
 		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($::DuckHunt::antiflood == 1)
+		|| (($canNickFlood == 1)
 		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::reload_cmd $::DuckHunt::flood_reload])
 		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
 	} then {
@@ -1954,10 +2002,19 @@ proc ::DuckHunt::reload_gun {nick host hand chan arg} {
 ### !lastduck : Affiche l'heure du dernier envol de canard.
  ###############################################################################
 proc ::DuckHunt::pub_show_last_duck {nick host hand chan arg} {
+
+	set lower_nick [::tcl::string::tolower $nick]
+
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
 	if {
 		(![channel get $chan DuckHunt])
 		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($::DuckHunt::antiflood == 1)
+		|| (($canNickFlood == 1)
 		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::lastduck_pub_cmd $::DuckHunt::flood_lastduck])
 		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
 	} then {
@@ -2009,13 +2066,138 @@ proc ::DuckHunt::msg_show_last_duck {nick host hand arg} {
 }
 
  ###############################################################################
-### !duckstats [nick] : Affiche ses stats ou celles d'un autre.
+### !topduck [chan] : 
  ###############################################################################
-proc ::DuckHunt::display_stats {nick host hand chan arg} {
+proc ::DuckHunt::display_topDuck {nick host hand chan arg} {
+
+	set lower_nick [::tcl::string::tolower $nick]
+
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
 	if {
 		(![channel get $chan DuckHunt])
 		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($::DuckHunt::antiflood == 1)
+		|| (($canNickFlood == 1)
+		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::topDuck_cmd $::DuckHunt::flood_stats])
+		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
+	} then {
+		return
+	} else {
+		set targetChan $chan
+		if { [set arg [::tcl::string::trim $arg]] ne "" } {
+			set targetChan [::tcl::string::tolower $arg]
+		} 
+        
+        ::DuckHunt::read_database
+
+        set hunters_And_Xp {}
+        set hunters_list [lsort [::tcl::dict::keys [::tcl::dict::get $::DuckHunt::player_data $targetChan]]]
+
+		if { $hunters_list ne "" } {
+            set num_hunters [llength $hunters_list]
+
+            set x 0
+			foreach hunter $hunters_list {
+                set hunterXP [::DuckHunt::get_data $hunter $targetChan "xp"]
+				lappend hunters_And_Xp "\00307$hunter\003 with $hunterXP xp"                
+            }
+
+            set TopHunters {}
+            set hunters_And_Xp_Sort [lsort -decreasing -integer -index 2 $hunters_And_Xp]
+            
+			set x 0
+             
+			::DuckHunt::display_output loglev - -  "Get top 5"              
+			while {$x<5} {		
+				if { $x < 4 && $x < $num_hunters-1 } {
+					lappend TopHunters "[lindex $hunters_And_Xp_Sort $x] \00314|\003"
+				} else {
+					lappend TopHunters "[lindex $hunters_And_Xp_Sort $x]"
+				}
+				incr x
+			}
+        }
+
+		if {$TopHunters ne ""} {
+			if { $::DuckHunt::preferred_display_mode == 1 } {
+				set output_method "PRIVMSG"
+				set output_target $chan
+			} else {
+				set output_method "NOTICE"
+				set output_target $nick
+			}
+			
+			putloglev o * "The top duck(s) are: [join $TopHunters]"
+			#::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
+			::DuckHunt::display_output help $output_method $output_target  "The top duck(s) are: [join $TopHunters]"
+		}
+        ::DuckHunt::purge_db_from_memory
+
+    }
+}
+
+ ###############################################################################
+### !help [chan] : 
+ ###############################################################################
+proc ::DuckHunt::display_duckHelp {nick host hand chan arg} {
+
+	set lower_nick [::tcl::string::tolower $nick]
+
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
+	if {
+		(![channel get $chan DuckHunt])
+		|| ($hand in $::DuckHunt::blacklisted_handles)
+		|| (($canNickFlood == 1)
+		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::duckHelp_cmd $::DuckHunt::flood_stats])
+		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
+	} then {
+		return
+	} else {        
+		
+		if { $::DuckHunt::preferred_display_mode == 1 } {
+			set output_method "PRIVMSG"
+			set output_target $chan
+		} else {
+			set output_method "NOTICE"
+			set output_target $nick
+		}
+		
+		set helpMsg "\00314\[Duck Hunt commands\]\003 !help, !bang, !reload, !shop, !topduck, !duckstats, !lastduck"
+		
+		#::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
+		::DuckHunt::display_output help $output_method $output_target  $helpMsg
+	
+	}
+
+    
+}
+
+ ###############################################################################
+### !duckstats [nick] : Affiche ses stats ou celles d'un autre.
+ ###############################################################################
+proc ::DuckHunt::display_stats {nick host hand chan arg} {
+
+	set lower_nick [::tcl::string::tolower $nick]
+
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
+	if {
+		(![channel get $chan DuckHunt])
+		|| ($hand in $::DuckHunt::blacklisted_handles)
+		|| (($canNickFlood == 1)
 		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::stat_cmd $::DuckHunt::flood_stats])
 		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
 	} then {
@@ -2104,7 +2286,7 @@ proc ::DuckHunt::display_stats {nick host hand chan arg} {
 		}
 		set items_list ""
 		set effects_list ""
-		# Textes : "Mun. AP" "Mun. expl." "Graisse" "Lunette de vis�e" "D�tect. infrarouge" "Silencieux" "Tr�fle � 4 feuilles" "Lunettes de soleil" "Ass. vie" "Ass. resp. civile" "D�tect. canards" "�bloui" "Sable" "Tremp�" "Sabot�"
+		# Texts: "Mun. AP" "Mun. expl." "Grease" "Riflescope" "Infrared Detector" "Silencer" "4 Leaf Clover" "Sunglasses" "Life Ass." "Civilian Resp. Ass." ducks" "Dazzled" "Sand" "Drenched" "Hooded"
 		set item_names [list 3 [::msgcat::mc m370] 4 [::msgcat::mc m371] 6 [::msgcat::mc m372] 7 [::msgcat::mc m373] 8 [::msgcat::mc m374] 9 [::msgcat::mc m375] 10 [::msgcat::mc m376] 11 [::msgcat::mc m377] 14 [::msgcat::mc m381] 15 [::msgcat::mc m382] 16 [::msgcat::mc m383] 17 [::msgcat::mc m384] 18 [::msgcat::mc m378] 19 [::msgcat::mc m379] 22 [::msgcat::mc m380]]
 		foreach item $items {
 			if { [set item_id [lindex $item 1]] in {3 4 6 7 8 9 10 11 18 19 22} } {
@@ -2131,6 +2313,11 @@ proc ::DuckHunt::display_stats {nick host hand chan arg} {
 			set output_method "NOTICE"
 			set output_target $nick
 		}
+
+		# set output_method "PRIVMSG"
+		# set output_target $nick		
+
+		#::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
 		::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
 		::DuckHunt::purge_db_from_memory
 	}
@@ -2193,18 +2380,24 @@ proc ::DuckHunt::calculate_karma {wild_shots humans_shot ducks_shot short} {
  ###############################################################################
 proc ::DuckHunt::shop {nick host hand chan arg} {
 	::DuckHunt::display_output loglev - -  "shop"
+	
+	set lower_nick [::tcl::string::tolower $nick]
+	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}	 
+		
 	if {
 		(![channel get $chan DuckHunt])
 		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($::DuckHunt::antiflood == 1)
+		|| (($canNickFlood == 1)
 		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::shop_cmd $::DuckHunt::flood_shop])
 		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
 	} then {
 		return
 	} else {
 		
-		::DuckHunt::display_output loglev - -  "shop1"
-		set lower_nick [::tcl::string::tolower $nick]
 		::DuckHunt::read_database
 		::DuckHunt::ckeck_for_pending_rename $chan $nick $lower_nick [md5 "$chan,$lower_nick"]
 		::DuckHunt::initialize_player $nick $lower_nick $chan
@@ -2220,7 +2413,7 @@ proc ::DuckHunt::shop {nick host hand chan arg} {
 				set output_method "PRIVMSG"
 				set output_target $chan
 			} else {
-				set output_method "NOTICE"
+				set output_method "PRIVMSG"
 				set output_target $nick
 			}
 			lassign [set args [split [::tcl::string::trim $arg]]] item_id target_nick
@@ -2248,18 +2441,23 @@ proc ::DuckHunt::shop {nick host hand chan arg} {
 					}
 					set must_write_db 0
 					lassign [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_nick $chan "xp"]] previous_player_lvl {} {} {} {} {} default_ammos_in_clip default_ammo_clips_per_day {} {} {} {}
-					::DuckHunt::display_output loglev - -  "shop3"
+					if { $lower_target_nick ne "" } {
+						lassign [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_target_nick $chan "xp"]] previous_player_lvl {} {} {} {} {} default_ammos_in_clip default_ammo_clips_per_day {} {} {} {}
+					} else {
+						lassign [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_nick $chan "xp"]] previous_player_lvl {} {} {} {} {} default_ammos_in_clip default_ammo_clips_per_day {} {} {} {}
+						}
 					switch -- $item_id {
-						1 {	::DuckHunt::display_output loglev - -  "ITEM 1"												
-							if { $target_nick ne "" } {
-								::DuckHunt::display_output loglev - -  "target_nick ne "	
+						1 {	
+							::DuckHunt::display_output loglev - -  "ITEM 1"												
+							if { $lower_target_nick ne "" } {
+								::DuckHunt::display_output loglev - -  "target_nick ne "
 									# Additional ball 
 								if { ![::DuckHunt::get_data $lower_target_nick $chan "gun"] } {
 									# Message : not armed.
 									::DuckHunt::display_output help $output_method $output_target "$target_nick is not armed" 
-								# } elseif { [::DuckHunt::get_data $lower_target_nick $chan "current_ammo_clip"] >= $default_ammos_in_clip } {
+								} elseif { [::DuckHunt::get_data $lower_target_nick $chan "current_ammo_clip"] >= $default_ammos_in_clip } {
 								# 	# Message : "%s > The magazine of your weapon is already full."
-								# 	::DuckHunt::display_output help $output_method $output_target "$target_nick\'s magazine of their weapon is already full." 
+									::DuckHunt::display_output help $output_method $output_target "$target_nick\'s magazine of their weapon is already full." 
 								} else {
 									::DuckHunt::incr_data $lower_target_nick $chan "current_ammo_clip" +1
 									::DuckHunt::incr_data $lower_nick $chan "xp" "-$::DuckHunt::extra_ammo_cost"
@@ -2269,7 +2467,8 @@ proc ::DuckHunt::shop {nick host hand chan arg} {
 									# Message : "%s > Tu viens d'ajouter une balle dans ton arme en �change de %s %s."
 									# Textes : "$nick > You just added an extra bullet in $target_nick\'s gun in exchange for"
 									# set $nick > You just added an extra bullet in $target_nick\'s gun in exchange for %s %s."
-									set output ["$nick > You just added an extra bullet in $target_nick\'s gun in exchange for" $::DuckHunt::extra_ammo_cost [::DuckHunt::plural $::DuckHunt::extra_ammo_cost [::msgcat::mc m285] [::msgcat::mc m286]]]
+									# set output ["$nick > You just added an extra bullet in $target_nick\'s gun in exchange for" $::DuckHunt::extra_ammo_cost [::DuckHunt::plural $::DuckHunt::extra_ammo_cost [::msgcat::mc m285] [::msgcat::mc m286]]]
+									set output [::msgcat::mc m268b $nick $target_nick $::DuckHunt::extra_ammo_cost [::DuckHunt::plural $::DuckHunt::extra_ammo_cost [::msgcat::mc m285] [::msgcat::mc m286]]]
 									set must_write_db 1
 								}
 							} else {
@@ -2294,22 +2493,24 @@ proc ::DuckHunt::shop {nick host hand chan arg} {
 							} 
 						}
 						2 {
+							::DuckHunt::display_output loglev - -  "ITEM 2"	
 							if { $target_nick ne "" } {
 								# Chargeur suppl�mentaire
-								if { ![::DuckHunt::get_data $lower_nick $chan "gun"] } {
-									# Message : "%s > tu n'es pas arm�."
-									::DuckHunt::display_output help $output_method $output_target [::msgcat::mc m5 $nick]
-								} elseif { [::DuckHunt::get_data $lower_nick $chan "remaining_ammo_clips"] >= $default_ammo_clips_per_day } {
+								::DuckHunt::display_output loglev - -  "target_nick ne"	
+								if { ![::DuckHunt::get_data $lower_target_nick $chan "gun"] } {
+									# Message : not armed.
+									::DuckHunt::display_output help $output_method $output_target "$target_nick is not armed" 
+								} elseif { [::DuckHunt::get_data $lower_target_nick $chan "remaining_ammo_clips"] >= $default_ammo_clips_per_day } {
 									# Message : "%s > Ta r�serve de chargeurs est d�j� pleine."
-									::DuckHunt::display_output help $output_method $output_target [::msgcat::mc m269 $nick]
+									::DuckHunt::display_output help $output_method $output_target "$target_nick\'s magazine supply is already full."
 								} else {
-									::DuckHunt::incr_data $lower_nick $chan "remaining_ammo_clips" +1
+									::DuckHunt::incr_data $lower_target_nick $chan "remaining_ammo_clips" +1
 									::DuckHunt::incr_data $lower_nick $chan "xp" "-$::DuckHunt::extra_clip_cost"
 									if { $::DuckHunt::hunting_logs } {
 										::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "item_2" 0 -
 									}
 									# Message : "%s > Tu viens d'ajouter un chargeur � ta r�serve en �change de %s %s."
-									set output [::msgcat::mc m270 $nick $::DuckHunt::extra_clip_cost [::DuckHunt::plural $::DuckHunt::extra_clip_cost [::msgcat::mc m285] [::msgcat::mc m286]]]
+									set output ["$nick > You just added a magazine to $target_nick\'s supply in exchange for" $::DuckHunt::extra_ammo_cost [::DuckHunt::plural $::DuckHunt::extra_ammo_cost [::msgcat::mc m285] [::msgcat::mc m286]]]
 									set must_write_db 1
 								}
 								
@@ -2778,9 +2979,9 @@ proc ::DuckHunt::shop {nick host hand chan arg} {
 }
 
  ###############################################################################
-### !unarm [-static] <nick> : D�sarme un chasseur.
-### Un joueur ainsi d�sarm� ne sera jamais r�arm� automatiquement.
-### Il faudra utiliser la commande !rearm pour le r�armer manuellement.
+### !unarm [-static] <nick>: Disarms a hunter.
+### A disarmed player will never be automatically re-armed.
+### You will need to use the !rearm command to manually rearm it.
  ###############################################################################
 proc ::DuckHunt::unarm {nick host hand chan arg} {
 	if { [channel get $chan DuckHunt] } {
@@ -4467,14 +4668,14 @@ proc ::DuckHunt::split_line {data limit} {
 }
 
  ###############################################################################
-### Contr�le du flood.
-### - focus peut valoir "chan" ou "nick" et diff�renciera un contr�le de flood
-###		collectif o� les commandes seront bloqu�es pour tout le monde, d'un
-###		contr�le individuel o� les commandes seront bloqu�es pour un seul individu.
-### - command peut valoir "*" ou le nom d'une commande et diff�renciera un
-###		contr�le par commande ou toutes commandes du script confondues.
-### - limit est exprim� sous la forme "xx:yy", o� xx = nombre maximum de
-###		requ�tes et yy = dur�e d'une instance.
+### Flood control.
+### - focus can be "chan" or "nick" and will differentiate a control from flood
+### collective where orders will be blocked for everyone, from one
+### individual control where orders will be blocked for a single individual.
+### - command can be "*" or the name of a command and will differentiate a
+### control by command or all script commands combined.
+### - limit is expressed as "xx:yy", where xx = maximum number of
+### requests and yy = duration of an instance.
  ###############################################################################
 proc ::DuckHunt::antiflood {nick chan focus command limit} {
 	lassign [split $limit ":"] max_instances instance_length
@@ -4567,16 +4768,16 @@ proc ::DuckHunt::antiflood_msg_reset {hash} {
 }
 
  ###############################################################################
-### Formatage d'un nombre d�cimal.
-### La pr�cision d�termine le nombre de d�cimales � conserver.
-### Les 0 se trouvant � la fin seront supprim�s.
+### Formatting a decimal number.
+### Precision determines how many decimal places to keep.
+### Trailing 0s will be removed.
  ###############################################################################
 proc ::DuckHunt::format_floating_point_value {value precision} {
 	return [::tcl::string::trimright [::tcl::string::trimright [format "%.${precision}f" $value] 0] "."]
 }
 
  ###############################################################################
-### Test de l'existence d'un utimer, renvoi de son ID
+### Test for the existence of a user, return its ID
  ###############################################################################
 proc ::DuckHunt::utimerexists {command} {
 	foreach utimer_ [utimers] {
@@ -4587,7 +4788,7 @@ proc ::DuckHunt::utimerexists {command} {
 }
 
  ###############################################################################
-### Test de l'existence d'un timer, renvoi de son ID
+### Test for the existence of a timer, return its ID
  ###############################################################################
 proc ::DuckHunt::timerexists {command} {
 	foreach timer_ [timers] {
@@ -4598,8 +4799,8 @@ proc ::DuckHunt::timerexists {command} {
 }
 
  ###############################################################################
-### Transforme un temps en millisecondes en temps lisible avec une r�solution
-### dynamique.
+### Transforms a time in milliseconds into a readable time with a resolution
+### dynamic.
  ###############################################################################
 proc ::DuckHunt::adapt_time_resolution {duration short} {
 	set milliseconds [::tcl::string::range $duration end-2 end]
@@ -4688,7 +4889,7 @@ proc ::DuckHunt::adapt_time_resolution {duration short} {
 }
 
  ###############################################################################
-### Correction de la casse des caract�res du nom d'un chan.
+### Corrected the case of characters in the name of a chan.
  ###############################################################################
 proc ::DuckHunt::fix_chan_case {chan} {
 	if { [validchan $chan] } {
@@ -4699,7 +4900,7 @@ proc ::DuckHunt::fix_chan_case {chan} {
 }
 
  ###############################################################################
-### Retourne une valeur en rouge si elle est <= 0
+### Returns a value in red if it is <= 0
  ###############################################################################
 proc ::DuckHunt::colorize_value {value} {
 	if { $value <= 0 } {
@@ -4710,7 +4911,7 @@ proc ::DuckHunt::colorize_value {value} {
 }
 
  ###############################################################################
-### Accorde au singulier ou au pluriel.
+### Matches singular or plural.
  ###############################################################################
 proc ::DuckHunt::plural {value singular plural} {
 	if {
@@ -4724,7 +4925,7 @@ proc ::DuckHunt::plural {value singular plural} {
 }
 
  ###############################################################################
-### M�lange al�atoirement les �l�ments d'une liste.
+### Randomly shuffles the elements of a list.
  ###############################################################################
 proc ::DuckHunt::randomize_list {data} {
    set list_length [llength $data]
@@ -4737,10 +4938,10 @@ proc ::DuckHunt::randomize_list {data} {
 }
 
  ###############################################################################
-### Backup quotidien de la base de donn�es.
+### Daily database backup.
  ###############################################################################
 proc ::DuckHunt::backup_db {min hour day month year} {
-	# Message : "\00314\[%s\]\003 Sauvegarde de la base de donn�es..."
+	# Message: "\00314\[%s\]\003 Backing up database..."
 	::DuckHunt::display_output loglev - - [::msgcat::mc m121 $::DuckHunt::scriptname]
 	if { [file exists $::DuckHunt::db_file] } {
 		file copy -force -- $::DuckHunt::db_file "${::DuckHunt::db_file}.bak"
@@ -4750,7 +4951,7 @@ proc ::DuckHunt::backup_db {min hour day month year} {
  ###############################################################################
 ### Post-initialisation.
  ###############################################################################
-# Relecture de la base de donn�es de suivi de changements de nick.
+# Rereading the nick change tracking database.
 if {
 	([file exists $::DuckHunt::pending_transfers_file])
 	&& ([file mtime $::DuckHunt::pending_transfers_file] + $::DuckHunt::pending_transfers_file_max_age > [unixtime])
@@ -4797,17 +4998,22 @@ bind time - "[lindex [split $::DuckHunt::backup_time ":"] 1] [lindex [split $::D
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd2 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd3 ::DuckHunt::shoot
+bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd4 ::DuckHunt::shoot
+bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd5 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::no_jizzing ::DuckHunt::no_jizz
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay2 ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay3 ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay4 ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay5 ::DuckHunt::shoot_relay
+bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay6 ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::no_shooting_cmd ::DuckHunt::no_shoot
 bind pub $::DuckHunt::reload_auth $::DuckHunt::reload_cmd ::DuckHunt::reload_gun
 bind pub $::DuckHunt::lastduck_pub_auth $::DuckHunt::lastduck_pub_cmd ::DuckHunt::pub_show_last_duck
 bind msg $::DuckHunt::lastduck_msg_auth $::DuckHunt::lastduck_msg_cmd ::DuckHunt::msg_show_last_duck
 bind pub $::DuckHunt::stat_auth $::DuckHunt::stat_cmd ::DuckHunt::display_stats
+bind pub $::DuckHunt::duckHelp_auth $::DuckHunt::duckHelp_cmd ::DuckHunt::display_duckHelp
+bind pub $::DuckHunt::topDuck_auth $::DuckHunt::topDuck_cmd ::DuckHunt::display_topDuck
 if { $::DuckHunt::shop_enabled } {
 	bind pub $::DuckHunt::shop_auth $::DuckHunt::shop_cmd ::DuckHunt::shop
 }
