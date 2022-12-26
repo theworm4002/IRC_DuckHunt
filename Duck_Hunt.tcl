@@ -2,7 +2,6 @@
 #
 # Duck Hunt
 # v2.11 (11/04/2016)  �2015-2016 Menz Agitat
-# v2.15 (12/18/22) Worm
 #
 # IRC: irc.epiknet.org  #boulets / #eggdrop
 #
@@ -15,6 +14,7 @@
 # d'id�es et la r�alisation du background inclus (duck_background.png).
 #
  ###############################################################################
+
 #
 # Description
 #
@@ -500,15 +500,6 @@ proc ::DuckHunt::shoot_relay {nick host hand chan arg} {
 	}
 	set cmdAct [::tcl::string::trim $cmdAct]
 
-	# set fo [open "/home/computertech/eggdrop/scripts/01_testo.txt" "w"] 
-	# puts $fo "pre:$::DuckHunt::shooting_cmd: \npost:$cmdAct:"
-	# puts $fo "nick:$nick host:$host hand:$hand ch:$chan cmdArg:$cmdAct 1:$shopcmd1 2:$shopcmd2 3:$shopcmd3"
-	# puts $fo ":$::DuckHunt::shooting_cmd: :$cmdAct:"
-	# close $fo
-	# ::DuckHunt::display_output loglev - -  "nick:$nick host:$host hand:$hand ch:$chan cmdArg:$cmdAct 1:$shopcmd1 2:$shopcmd2 3:$shopcmd3"
-	# ::DuckHunt::display_output loglev - -  ":$::DuckHunt::shooting_cmd: :$cmdAct:"
-
-
 	if {($::DuckHunt::shooting_cmd == $cmdAct)
 		|| ($::DuckHunt::shooting_cmd2 == $cmdAct)
 		|| ($::DuckHunt::shooting_cmd3 == $cmdAct)
@@ -528,483 +519,6 @@ proc ::DuckHunt::shoot_relay {nick host hand chan arg} {
 	} else {return}
 }
 
-###############################################################################
-### !jizz computertech : A player shoots. 
- ###############################################################################
-proc ::DuckHunt::no_jizz {nick host hand chan arg} {
-
-	set lower_nick [::tcl::string::tolower $nick]
-
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
-		variable canNickFlood 0
-	} else {
-		 variable canNickFlood $::DuckHunt::antiflood
-	}
-	
-	if {
-		(![channel get $chan DuckHunt])
-		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($canNickFlood == 1)
-		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::no_shooting_cmd $::DuckHunt::flood_reload])
-		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
-	} then {
-		return
-	} else {
-		lassign [set args [split [::tcl::string::trim $arg]]] ctNick
-		set lower_ctNick [::tcl::string::tolower $ctNick]		
-		if {$lower_ctNick=="duckhunt"} then {
-			::DuckHunt::display_output now PRIVMSG $chan "!jizz $nick"			
-		} elseif {$lower_ctNick=="computertech"} then {
-			::DuckHunt::display_output now PRIVMSG $chan "!jizz $nick"
-		} else {return}
-	}
-}
-
-###############################################################################
-### !hate computertech : A player shoots. 
- ###############################################################################
-proc ::DuckHunt::no_shoot {nick host hand chan arg} {
-
-	set lower_nick [::tcl::string::tolower $nick]
-
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
-		variable canNickFlood 0
-	} else {
-		 variable canNickFlood $::DuckHunt::antiflood
-	}
-	
-	if {
-		(![channel get $chan DuckHunt])
-		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($canNickFlood == 1)
-		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::no_shooting_cmd $::DuckHunt::flood_reload])
-		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
-	} then {
-		return
-	} else {
-		lassign [set args [split [::tcl::string::trim $arg]]] ctNick
-		set lower_ctNick [::tcl::string::tolower $ctNick]		
-		if {$lower_ctNick=="duckhunt"} then {
-			::DuckHunt::display_output now PRIVMSG $chan "!hate $nick"
-			::DuckHunt::display_output now PRIVMSG $chan "!love duckhunt"			
-		} elseif {$lower_ctNick=="computertech"} then {
-			::DuckHunt::display_output now PRIVMSG $chan "!hate $nick"
-			::DuckHunt::display_output now PRIVMSG $chan "!love computertech"
-		} else {return}
-		set lower_nick [::tcl::string::tolower $nick]
-		if { $::DuckHunt::preferred_display_mode == 1 } {
-			set output_method "PRIVMSG"
-			set output_target $chan
-		} else {
-			set output_method "NOTICE"
-			set output_target $nick
-		}
-		::DuckHunt::read_database
-		::DuckHunt::ckeck_for_pending_rename $chan $nick $lower_nick [md5 "$chan,$lower_nick"]
-		::DuckHunt::initialize_player $nick $lower_nick $chan
-		if { [::tcl::dict::exists $::DuckHunt::duck_sessions $chan] } {
-			# We note the cumulative response time of the player.
-			::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "cumul_reflex_time" [expr {[::DuckHunt::get_data $lower_nick $chan "cumul_reflex_time"] + [expr {[::tcl::clock::milliseconds] - [lindex [::tcl::dict::get $::DuckHunt::duck_sessions $chan] 0 1]}]}]
-			set num_ducks_in_flight [llength [::tcl::dict::get $::DuckHunt::duck_sessions $chan]]
-		} else {
-			set num_ducks_in_flight 0
-		}
-		set current_time [unixtime]
-		::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "last_activity" $current_time
-		# The player has no weapon (weapon confiscated).
-		if { [::DuckHunt::get_data $lower_nick $chan "gun"] <= 0 } {
-			# Message : "%s > tu n'es pas arm�."
-			return
-		# The player has received a bucket of water.
-		} elseif { [lindex [::DuckHunt::get_item_info $lower_nick $chan "16"] 0] != -1 } {
-			# Message : "%s > � cause de %s, tes v�tements sont tremp�s et tu ne peux pas chasser comme �a. Tu dois encore patienter pendant %s."
-			return
-		# The player has a weapon.
-		} else {
-			set sand_effect_msg ""
-			set sabotage_effect_msg ""
-			set dazzle_effect_msg ""
-			lassign [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_nick $chan "xp"]] level required_xp accuracy deflection defense jamming ammos_per_clip ammo_clips xp_miss xp_wild_fire xp_accident
-			# Le joueur a du sable dans son arme.
-			lassign [::DuckHunt::get_item_info $lower_nick $chan "15"] item_index {} author
-			if { $item_index != -1 } {
-				set jamming [expr {$jamming * 2}]
-				::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [lreplace [::DuckHunt::get_data $lower_nick $chan "items"] $item_index $item_index]
-				# Texte : " \00304\[ensabl� par %s\]\003"
-				set sand_effect_msg [::msgcat::mc m333 $author]
-			}
-			# Le joueur a graiss� son arme.
-			if { [lindex [::DuckHunt::get_item_info $lower_nick $chan "6"] 0] != -1 } {
-				set jamming [expr {int($jamming / 2)}]
-			}
-			# L'arme du joueur a �t� sabot�e.
-			lassign [::DuckHunt::get_item_info $lower_nick $chan "17"] item_index {} sabotage_author
-			if { $item_index != -1 } {
-				set has_been_sabotaged 1
-				::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [lreplace [::DuckHunt::get_data $lower_nick $chan "items"] $item_index $item_index]
-				# Texte : "   \00304\[sabotage par %s\]\003"
-				set sabotage_effect_msg [::msgcat::mc m337 $sabotage_author]
-			} else {
-				set has_been_sabotaged 0
-			}
-			# Le joueur poss�de une assurance responsabilit� civile.
-			if { [set item_index [lindex [::DuckHunt::get_item_info $lower_nick $chan "19"] 0]] != -1 } {
-				set xp_accident [expr {int($xp_accident / 3)}]
-				# Message : " \00303\[assurance resp. civile\]\003"
-				set liability_insurance_msg [::msgcat::mc m343]
-			} else {
-				set liability_insurance_msg ""
-			}
-			# L'arme est enray�e.
-			if { [::DuckHunt::get_data $lower_nick $chan "jammed"] } {
-				# Message : "%s > \00314*CLAC*\003     \00304ARME ENRAY�E\003"
-				::DuckHunt::display_output quick $output_method $output_target [::msgcat::mc m7 $nick]
-				::DuckHunt::purge_db_from_memory
-				return
-				# L'arme s'enraye.
-			} elseif {
-				($has_been_sabotaged)
-				|| ([expr {int(rand()*100)+1}] <= $jamming)
-			} then {
-				::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "jammed" 1
-				::DuckHunt::incr_data $lower_nick $chan "jammed_weapons" +1
-				# Message : "%s > \00314*CLAC*\003     Ton arme s'est enray�e, tu dois recharger pour la d�coincer... \00314|\003 Mun. : \002%s\002 \00314|\003 Charg. : \002%s\002"
-				::DuckHunt::display_output quick $output_method $output_target "[::msgcat::mc m8 $nick [::DuckHunt::display_ammo $lower_nick $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_nick $chan $ammo_clips]]${sabotage_effect_msg}$sand_effect_msg"
-				if { $::DuckHunt::hunting_logs } {
-					::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "jam" 0 -
-				}
-				# L'arme du joueur a �t� sabot�e et explose.
-				if {
-					($has_been_sabotaged)
-					&& ($::DuckHunt::kick_when_sabotaged)
-				} then {
-					if { $::DuckHunt::kick_method } {
-						# Message : "\002*BOOM*\002     Ton arme vient d'exploser � cause du sabotage de %s."
-						putserv "CS kick $chan $nick [::msgcat::mc m338 $sabotage_author]"
-					} elseif { ![isop $::nick $chan] } {
-						# Message : "\00314\[%s\]\003 \00304:::\003 Erreur : %s n'a pas pu �tre kick� sur %s car je n'y suis ni halfop�, ni op�."
-						::DuckHunt::display_output loglev - - [::msgcat::mc m140 $::DuckHunt::scriptname $nick $chan]
-					} else {
-						# Message : "\002*BOOM*\002     Ton arme vient d'exploser � cause du sabotage de %s."
-						putkick $chan $nick [::msgcat::mc m338 $sabotage_author]
-					}
-				}
-			# L'arme ne s'enraye pas.
-			} else {
-				# The weapon is not loaded and the ammunition is not unlimited.
-				if {
-					([::DuckHunt::get_data $lower_nick $chan "current_ammo_clip"] == 0)
-					&& !($::DuckHunt::unlimited_ammo_per_clip)
-				} then {
-					::DuckHunt::incr_data $lower_nick $chan "empty_shots" +1
-					# Message : "%s > \00314*CLIC*\003     \00304CHARGEUR VIDE\003 \00314|\003 Mun. : \002%s\002 \00314|\003 Charg. : \002%s\002"
-					::DuckHunt::display_output quick $output_method $output_target [::msgcat::mc m6 $nick [::DuckHunt::display_ammo $lower_nick $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_nick $chan $ammo_clips]]
-					if { $::DuckHunt::hunting_logs } {
-						::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "empty_shot" 0 -
-					}
-				# L'arme est charg�e.
-				} else {
-					# Le joueur poss�de un d�tecteur infrarouge et il n'y a pas de canard.
-					lassign [::DuckHunt::get_item_info $lower_nick $chan "8"] item_index expiration_date item_uses
-					if {
-						!([set duck_present [::tcl::dict::exists $::DuckHunt::duck_sessions $chan]])
-						&& ($item_index != -1)
-					} then {
-						# Message : "%s > \00314*CLIC*\003     G�chette verrouill�e."
-						::DuckHunt::display_output quick $output_method $output_target [::msgcat::mc m290 $nick]
-						::DuckHunt::decrement_item_uses $lower_nick $chan "8" $item_index $expiration_date $item_uses
-						::DuckHunt::write_database
-						::DuckHunt::purge_db_from_memory
-						return
-					}
-					if { !$::DuckHunt::unlimited_ammo_per_clip } {
-						::DuckHunt::incr_data $lower_nick $chan "current_ammo_clip" -1
-					}
-					set base_accuracy $accuracy
-					# Le joueur est �bloui.
-					lassign [::DuckHunt::get_item_info $lower_nick $chan "14"] item_index {} author
-					if { $item_index != -1 } {
-						set accuracy [expr {int($accuracy / 2)}]
-						::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [lreplace [::DuckHunt::get_data $lower_nick $chan "items"] $item_index $item_index]
-						# Texte : " \00304\[�bloui par %s\]\003"
-						set dazzle_effect_msg [::msgcat::mc m334 $author]
-					}
-					# Le joueur a install� une lunette de vis�e sur son arme.
-					if { [set item_index [lindex [::DuckHunt::get_item_info $lower_nick $chan "7"] 0]] != -1 } {
-						set accuracy [expr {$accuracy + int((100 - $base_accuracy) / 3)}]
-						::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "items" [lreplace [::DuckHunt::get_data $lower_nick $chan "items"] $item_index $item_index]
-					}
-					set duck_fleed 0
-					# Le joueur rate son tir ou il n'y a aucun canard en vol.
-					if {
-						!($duck_present)
-						|| ([expr {int(rand()*100)+1}] > $accuracy)
-					} then {
-						::DuckHunt::incr_data $lower_nick $chan "missed_shots" +1
-						if { ![::tcl::info::exists previous_xp] } {
-							set previous_xp [::DuckHunt::get_data $lower_nick $chan "xp"]
-						}
-						::DuckHunt::incr_data $lower_nick $chan "xp" $xp_miss
-						if { $::DuckHunt::devoice_on_miss } {
-							pushmode $chan -v $nick
-						}
-						# Si des canards sont en vol, on incr�mente le compteur de tirs
-						# manqu�s effectu�s en leur pr�sence et on voit si certains ont
-						# atteint leur limite.
-						if { $duck_present } {
-							return
-						} else {
-							# Texte : "\[tir sauvage : %s xp\] "
-							set xp_wild_fire_msg [::msgcat::mc m9 $xp_wild_fire]
-						}
-						set chances_to_hit_someone_else [::DuckHunt::determine_chances_to_hit_someone_else $chan $duck_present]
-						set someone_has_been_hit 0
-						set confiscation_msg_sent 0
-						set xp_penalty_msg_sent 0
-						set ricochet_counter 0
-						set source_nick $nick
-						# La balle perdue touche un autre joueur.
-						while {
-							([expr {int(rand()*100)+1}] <= $chances_to_hit_someone_else)
-							&& ($ricochet_counter < $::DuckHunt::max_ricochets)
-							&& ([set victim [::DuckHunt::random_user $chan $source_nick]] ne "@nobody@")
-						} {
-							set someone_has_been_hit 1
-							set source_nick $victim
-							set lower_victim [::tcl::string::tolower $victim]
-							::DuckHunt::ckeck_for_pending_rename $chan $victim $lower_victim [md5 "$chan,$lower_victim"]
-							::DuckHunt::incr_data $lower_nick $chan "humans_shot" +1
-							if { $::DuckHunt::devoice_on_accident } {
-								pushmode $chan -v $nick
-							}
-							if { ![::tcl::info::exists previous_xp] } {
-								set previous_xp [::DuckHunt::get_data $lower_nick $chan "xp"]
-							}
-							::DuckHunt::incr_data $lower_nick $chan "xp" $xp_accident
-							::DuckHunt::initialize_player $victim $lower_victim $chan
-							::DuckHunt::incr_data $lower_victim $chan "bullets_received" +1
-							# Confiscation �ventuelle de l'arme.
-							if {
-								($::DuckHunt::gun_confiscation_when_shooting_someone)
-								&& !($confiscation_msg_sent)
-							} then {
-								::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "gun" 0
-								::DuckHunt::incr_data $lower_nick $chan "confiscated_weapons" +1
-								# Texte : " \00304\[ARME CONFISQU�E : accident de chasse\]\003"
-								set gun_confiscation1 [::msgcat::mc m10]
-								# Texte : " ainsi que son arme"
-								set gun_confiscation2 [::msgcat::mc m11]
-							} else {
-								set gun_confiscation1 ""
-								set gun_confiscation2 ""
-							}
-							# On n'affiche qu'une seule fois l'xp perdue pour tir rat�/sauvage.
-							if { !$xp_penalty_msg_sent } {
-								if { !$duck_present } {
-									# Texte : "\[rat� : %s xp\] "
-									set xp_penalty_msg "[::msgcat::mc m12 $xp_miss]$xp_wild_fire_msg"
-									set lost_xp [expr {abs($xp_miss) + abs($xp_wild_fire) + abs($xp_accident)}]
-								} else {
-									# Texte : "\[rat� : %s xp\] "
-									set xp_penalty_msg "[::msgcat::mc m12 $xp_miss]"
-									set lost_xp [expr {abs($xp_miss) + abs($xp_accident)}]
-								}
-								if { $::DuckHunt::hunting_logs } {
-									::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "accident" 1 -
-								}
-							} else {
-								set xp_penalty_msg ""
-								set lost_xp [expr {abs($xp_accident)}]
-							}
-							# La victime poss�de une assurance vie.
-							if { [set item_index [lindex [::DuckHunt::get_item_info $lower_victim $chan "18"] 0]] != -1 } {
-								::tcl::dict::set ::DuckHunt::player_data $chan $lower_victim "items" [lreplace [::DuckHunt::get_data $lower_victim $chan "items"] $item_index $item_index]
-								::DuckHunt::incr_data $lower_victim $chan "xp" [set life_insurance_xp [expr {[lindex [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_victim $chan "xp"]] 0] * 2}]]
-								# Message : " \00303\[assurance vie : +%s xp pour %s\]\003"
-								set life_insurance_msg [::msgcat::mc m340 $life_insurance_xp $victim]
-								# Message : " \00303\[assurance vie : +%s xp\]\003"
-								set life_insurance_msg2 [::msgcat::mc m341 $life_insurance_xp]
-							} else {
-								set life_insurance_msg ""
-								set life_insurance_msg2 ""
-							}
-							lassign [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_victim $chan "xp"]] {} {} {} victim_deflection victim_defense {} {} {} {} {} {}
-							# La balle ricoche.
-							if { [expr {int(rand()*100)+1}] <= $victim_deflection } {
-								::DuckHunt::incr_data $lower_victim $chan "deflected_bullets" +1
-								incr ricochet_counter
-								set confiscation_msg_sent 1
-								set xp_penalty_msg_sent 1
-								# Message : "\00314*PIEWWW*\003     La balle de %s ricoche sur %s gr�ce � son modificateur de d�flexion de %s%%.   \00304%s\[accident : %s xp\]\003"
-								::DuckHunt::display_output quick PRIVMSG $chan "[::msgcat::mc m13 $nick $victim $victim_deflection $xp_penalty_msg $xp_accident]${gun_confiscation1}${dazzle_effect_msg}${liability_insurance_msg}$life_insurance_msg"
-								if { $::DuckHunt::hunting_logs } {
-									::DuckHunt::add_to_log $chan $current_time $nick $lower_nick $lower_victim - "deflect" 1 -
-								}
-								#	Un canard est touch� par ricochet.
-								if {
-									($duck_present)
-									&& ([expr {int(rand()*100)+1}] <= $::DuckHunt::chances_to_ricochet_towards_duck)
-								} then {
-									::DuckHunt::hit_a_duck $nick $lower_nick $chan 1 $output_method $output_target
-									break
-								}
-							# L'autre joueur r�siste.
-							} elseif { [expr {int(rand()*100)+1}] <= $victim_defense } {
-								set confiscation_msg_sent 1
-								set xp_penalty_msg_sent 1
-								# Message : "\00314*CHTOK*\003     %s re�oit la balle de %s mais accuse le coup gr�ce � son modificateur d'armure de %s%%.   \00304%s\[accident : %s xp\]\003"
-								::DuckHunt::display_output quick PRIVMSG $chan "[::msgcat::mc m14 $victim $nick $victim_defense $xp_penalty_msg $xp_accident]${gun_confiscation1}${dazzle_effect_msg}${liability_insurance_msg}$life_insurance_msg"
-								if { $::DuckHunt::hunting_logs } {
-									if { $::DuckHunt::gun_confiscation_when_shooting_someone } {
-										::DuckHunt::add_to_log $chan $current_time $nick $lower_nick $lower_victim - "hit" 1 -
-										::DuckHunt::add_to_log $chan $current_time $nick $lower_nick $lower_victim - "confiscated" 0 -
-									} else {
-										::DuckHunt::add_to_log $chan $current_time $nick $lower_nick $lower_victim - "hit" 0 -
-									}
-								}
-								break
-							# L'autre joueur est abattu.
-							} else {
-								::DuckHunt::incr_data $lower_victim $chan "deaths" +1
-								set confiscation_msg_sent 1
-								set xp_penalty_msg_sent 1
-								if { $::DuckHunt::kick_when_shot } {
-									if { $::DuckHunt::kick_method } {
-										# Message : "\002*BANG*\002     Tu viens d'�tre victime d'un accident de chasse. %s s'en excuse... et perd %s pts d'xp."
-										putserv "CS kick $chan $victim [::msgcat::mc m15 $nick $lost_xp]${gun_confiscation2}$life_insurance_msg2"
-									} elseif { ![isop $::nick $chan] } {
-										# Message : "\00314\[%s\]\003 \00304:::\003 Erreur : %s n'a pas pu �tre kick� sur %s car je n'y suis ni halfop�, ni op�."
-										::DuckHunt::display_output loglev - - [::msgcat::mc m140 $::DuckHunt::scriptname $victim $chan]
-									} else {
-										# Message : "\002*BANG*\002     Tu viens d'�tre victime d'un accident de chasse. %s s'en excuse... et perd %s pts d'xp."
-										putkick $chan $victim "[::msgcat::mc m15 $nick $lost_xp]${gun_confiscation2}$life_insurance_msg2"
-									}
-								}
-								# Message : "\00314*BANG*\003 \002\037xO\037'\002     %s vient de se faire descendre par %s par accident.   \00304%s\[accident : %s xp\]\003"
-								::DuckHunt::display_output quick PRIVMSG $chan "[::msgcat::mc m16 $victim $nick $xp_penalty_msg $xp_accident]${gun_confiscation1}${dazzle_effect_msg}${liability_insurance_msg}$life_insurance_msg"
-								if { $::DuckHunt::hunting_logs } {
-									if { $::DuckHunt::gun_confiscation_when_shooting_someone } {
-										::DuckHunt::add_to_log $chan $current_time $nick $lower_nick $lower_victim - "die" 1 -
-										::DuckHunt::add_to_log $chan $current_time $nick $lower_nick $lower_victim - "confiscated" 0 -
-									} else {
-										::DuckHunt::add_to_log $chan $current_time $nick $lower_nick $lower_victim - "die" 0 -
-									}
-								}
-								break
-							}
-						}
-						# Il n'y a actuellement aucun canard en vol sur le chan.
-						if { !$duck_present } {
-							::DuckHunt::incr_data $lower_nick $chan "wild_shots" +1
-							if { ![::tcl::info::exists previous_xp] } {
-								set previous_xp [::DuckHunt::get_data $lower_nick $chan "xp"]
-							}
-							::DuckHunt::incr_data $lower_nick $chan "xp" $xp_wild_fire
-							if { $::DuckHunt::devoice_on_wild_fire } {
-								pushmode $chan -v $nick
-							}
-							# Confiscation �ventuelle de l'arme.
-							if {
-								($::DuckHunt::gun_confiscation_on_wild_fire)
-								&& ([::DuckHunt::get_data $lower_nick $chan "gun"] == 1)
-							} then {
-								::tcl::dict::set ::DuckHunt::player_data $chan $lower_nick "gun" 0
-								::DuckHunt::incr_data $lower_nick $chan "confiscated_weapons" +1
-								# Texte : "   \00304\[ARME CONFISQU�E : tir sauvage\]\003"
-								set gun_confiscation [::msgcat::mc m17]
-								if { $::DuckHunt::hunting_logs } { 
-									::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "wild_fire" 1 -
-									::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "confiscated" 0 -
-								}
-							} else {
-								set gun_confiscation ""
-								if { $::DuckHunt::hunting_logs } {
-									::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "wild_fire" 0 -
-								}
-							}
-							# Si personne n'a �t� touch�, c'est juste un tir sauvage.
-							if { !$someone_has_been_hit } {
-								# Message : "%s > Par chance tu as rat�, mais tu visais qui au juste ? Il n'y a aucun canard dans le coin...   \00304\[rat� : %s xp\] \[tir sauvage : %s xp\]\003"
-								::DuckHunt::display_output quick $output_method $output_target "[::msgcat::mc m18 $nick $xp_miss $xp_wild_fire]${gun_confiscation}"
-							}
-						# Il y a au moins un canard en vol sur le chan.
-						} else {
-							# Si personne n'a �t� touch�, c'est juste un tir manqu�.
-							if { !$someone_has_been_hit } {
-								# Message : "%s > Rat�.   \00304\[rat� : %s xp\]\003"
-								::DuckHunt::display_output quick $output_method $output_target "[::msgcat::mc m19 $nick $xp_miss]$dazzle_effect_msg"
-								if { $::DuckHunt::hunting_logs } {
-									::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "miss" 0 -
-								}
-							}
-						}
-						# Kick pour tir non-autoris� en l'absence de canard.
-						if {
-							(!$duck_present)
-							&& ($::DuckHunt::kick_on_wild_fire)
-						} then {
-							if { $::DuckHunt::kick_method } {
-								# Message : "Tu vises qui l� ? Je ne vois aucun canard dans le coin. \[%s xp\] \[%s xp\]"
-								putserv "CS kick $chan $nick [::msgcat::mc m20 $xp_miss $xp_wild_fire]"
-							} elseif { ![isop $::nick $chan] } {
-								# Message : "\00314\[%s\]\003 \00304:::\003 Erreur : %s n'a pas pu �tre kick� sur %s car je n'y suis ni halfop�, ni op�."
-								::DuckHunt::display_output loglev - - [::msgcat::mc m140 $::DuckHunt::scriptname $nick $chan]
-							} else {
-								# Message : "Tu vises qui l� ? Je ne vois aucun canard dans le coin. \[%s xp\] \[%s xp\]   "
-								putkick $chan $nick [::msgcat::mc m20 $xp_miss $xp_wild_fire]
-							}
-						}
-						if {
-							([::tcl::info::exists previous_xp])
-							&& ([lindex [::DuckHunt::get_level_and_grantings $previous_xp] 0] > [lindex [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_nick $chan "xp"]] 0])
-						} then {
-							# Message "%s est r�trograd�(e) au rang de chasseur niveau %s (%s)."
-							::DuckHunt::display_output quick PRIVMSG $chan [::msgcat::mc m2 $nick [set level [lindex [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_nick $chan "xp"]] 0]] [::DuckHunt::lvl2rank $level]]
-						}
-					# Le joueur r�ussit son tir.
-					} else {
-						::DuckHunt::hit_a_duck $nick $lower_nick $chan 0 $output_method $output_target
-						incr num_ducks_in_flight -1
-						if { $::DuckHunt::successful_shots_also_scares_ducks } {
-							incr duck_fleed [::DuckHunt::ducks_scaring $chan $lower_nick]
-						}
-					}
-					# Le tir manqu� a effray� un ou plusieurs canards qui parviennent �
-					# s'�chapper.
-					if { $duck_fleed > 1 } {
-						if { $duck_fleed == $num_ducks_in_flight } {
-							# Message : "Effray�s par tout ce bruit, tous les canards s'�chappent.     \00314��'`'�-.,��.��'`\003"
-							::DuckHunt::display_output now PRIVMSG $chan [::msgcat::mc m21]
-						} else {
-							# Message : "Effray�s par tout ce bruit, %s canards s'�chappent.     \00314��'`'�-.,��.��'`\003"
-							::DuckHunt::display_output now PRIVMSG $chan [::msgcat::mc m22 $duck_fleed]
-						}
-						for { set counter 1 } { $counter <= $duck_fleed } { incr counter } {
-							if { $::DuckHunt::hunting_logs } {
-								::DuckHunt::add_to_log $chan $current_time - - - - "frightened" 0 -
-							}
-						}
-					} elseif { $duck_fleed == 1 } {
-						if { $num_ducks_in_flight == 1 } {
-							# Message : "Effray� par tout ce bruit, le canard s'�chappe.     \00314��'`'�-.,��.��'`\003"
-							::DuckHunt::display_output now PRIVMSG $chan [::msgcat::mc m23]
-						} else {
-							# Message : "Effray� par tout ce bruit, un canard s'�chappe.     \00314��'`'�-.,��.��'`\003"
-							::DuckHunt::display_output now PRIVMSG $chan [::msgcat::mc m24]
-						}
-						if { $::DuckHunt::hunting_logs } {
-							::DuckHunt::add_to_log $chan $current_time - - - - "frightened" 0 -
-						}
-					}
-				}
-			}
-			::DuckHunt::recalculate_ammo_on_lvl_change $lower_nick $chan
-			::DuckHunt::write_database
-		}
-		::DuckHunt::purge_db_from_memory
-	}
-	return
-}
 
  ###############################################################################
 ### !bang : Un joueur tire.
@@ -1013,10 +527,10 @@ proc ::DuckHunt::shoot {nick host hand chan arg} {
 
 	set lower_nick [::tcl::string::tolower $nick]
 
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
 		variable canNickFlood 0
 	} else {
-		 variable canNickFlood $::DuckHunt::antiflood
+		variable canNickFlood $::DuckHunt::antiflood
 	}
 	
 	if {
@@ -1449,7 +963,7 @@ proc ::DuckHunt::shoot {nick host hand chan arg} {
 }
 
  ###############################################################################
-### Un joueur a tir�, on incr�mente le degr� de peur des canards.
+### A player has shoot, we increment the degree of fear of the ducks.
  ###############################################################################
 proc ::DuckHunt::ducks_scaring {chan lower_nick} {
 	set duck_fleed 0
@@ -1869,7 +1383,7 @@ proc ::DuckHunt::reload_gun {nick host hand chan arg} {
 
 	set lower_nick [::tcl::string::tolower $nick]
 
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
 		variable canNickFlood 0
 	} else {
 		 variable canNickFlood $::DuckHunt::antiflood
@@ -2004,7 +1518,7 @@ proc ::DuckHunt::pub_show_last_duck {nick host hand chan arg} {
 
 	set lower_nick [::tcl::string::tolower $nick]
 
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
 		variable canNickFlood 0
 	} else {
 		 variable canNickFlood $::DuckHunt::antiflood
@@ -2071,7 +1585,7 @@ proc ::DuckHunt::display_topDuck {nick host hand chan arg} {
 
 	set lower_nick [::tcl::string::tolower $nick]
 
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
 		variable canNickFlood 0
 	} else {
 		 variable canNickFlood $::DuckHunt::antiflood
@@ -2146,7 +1660,7 @@ proc ::DuckHunt::display_duckHelp {nick host hand chan arg} {
 
 	set lower_nick [::tcl::string::tolower $nick]
 
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
 		variable canNickFlood 0
 	} else {
 		 variable canNickFlood $::DuckHunt::antiflood
@@ -2187,7 +1701,7 @@ proc ::DuckHunt::display_stats {nick host hand chan arg} {
 
 	set lower_nick [::tcl::string::tolower $nick]
 
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
 		variable canNickFlood 0
 	} else {
 		 variable canNickFlood $::DuckHunt::antiflood
@@ -2381,7 +1895,7 @@ proc ::DuckHunt::shop {nick host hand chan arg} {
 	::DuckHunt::display_output loglev - -  "shop"
 	
 	set lower_nick [::tcl::string::tolower $nick]
-	if { $lower_nick in $::DuckHunt::can_Flood_bot } then {
+	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
 		variable canNickFlood 0
 	} else {
 		 variable canNickFlood $::DuckHunt::antiflood
@@ -2447,9 +1961,8 @@ proc ::DuckHunt::shop {nick host hand chan arg} {
 						}
 					switch -- $item_id {
 						1 {	
-							::DuckHunt::display_output loglev - -  "ITEM 1"												
+																		
 							if { $lower_target_nick ne "" } {
-								::DuckHunt::display_output loglev - -  "target_nick ne "
 									# Additional ball 
 								if { ![::DuckHunt::get_data $lower_target_nick $chan "gun"] } {
 									# Message : not armed.
@@ -3401,8 +2914,10 @@ proc ::DuckHunt::launch {nick host hand arg} {
 			}
 			if { $::DuckHunt::hunting_logs } {
 				if { $is_golden_duck } {
+					::DuckHunt::display_output loglev - - 	"Gold duck launched in $chan by $nick"
 					::DuckHunt::add_to_log $chan [unixtime] $nick - - - "golden_duck_launch" 0 -
 				} else {
+					::DuckHunt::display_output loglev - -  "Duck launched in $chan by $nick"
 					::DuckHunt::add_to_log $chan [unixtime] $nick - - - "launch" 0 -
 				}
 			}
