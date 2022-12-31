@@ -2,6 +2,7 @@
 #
 # Duck Hunt
 # v2.11 (11/04/2016)  �2015-2016 Menz Agitat
+# v2.15 (12/18/22) Worm
 #
 # IRC: irc.epiknet.org  #boulets / #eggdrop
 #
@@ -85,7 +86,7 @@ namespace eval ::DuckHunt {
 	### Initialisation
 	 #############################################################################
 	variable scriptname "Duck Hunt"
-	variable version "2.11.20160411"
+	variable version "2.15.20221231"
 	setudef flag DuckHunt
 	setudef str DuckHunt-LastDuck
 	setudef str DuckHunt-PiecesOfBread
