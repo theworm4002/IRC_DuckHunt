@@ -3142,8 +3142,8 @@ proc ::DuckHunt::hand_back_weapons {args} {
 }
 
  ###############################################################################
-### On v�rifie si un joueur est d�j� enregistr� dans la base de donn�es et
-### on l'initialise si n�cessaire.
+### We check if a player is already registered in the database and
+### we initialize it if necessary.
  ###############################################################################
 proc ::DuckHunt::initialize_player {nick lower_nick chan} {
 	if {
@@ -4515,14 +4515,12 @@ bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd3 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd4 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd5 ::DuckHunt::shoot
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_cmd6 ::DuckHunt::shoot
-bind pub $::DuckHunt::shooting_auth $::DuckHunt::no_jizzing ::DuckHunt::no_jizz
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay2 ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay3 ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay4 ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay5 ::DuckHunt::shoot_relay
 bind pub $::DuckHunt::shooting_auth $::DuckHunt::shooting_relay6 ::DuckHunt::shoot_relay
-bind pub $::DuckHunt::shooting_auth $::DuckHunt::no_shooting_cmd ::DuckHunt::no_shoot
 bind pub $::DuckHunt::reload_auth $::DuckHunt::reload_cmd ::DuckHunt::reload_gun
 bind pub $::DuckHunt::lastduck_pub_auth $::DuckHunt::lastduck_pub_cmd ::DuckHunt::pub_show_last_duck
 bind msg $::DuckHunt::lastduck_msg_auth $::DuckHunt::lastduck_msg_cmd ::DuckHunt::msg_show_last_duck
