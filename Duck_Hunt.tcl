@@ -445,7 +445,7 @@ proc ::DuckHunt::terminate_duck_session {chan has_been_shot} {
  ###############################################################################
 proc ::DuckHunt::shoot_relay {nick host hand chan arg} {
 	set relayCMD_chk {}
-	set relayCMDs "$::DuckHunt::shop_cmd $::DuckHunt::stat_cmd $::DuckHunt::lastduck_pub_cmd $::DuckHunt::reload_cmd $::DuckHunt::no_shooting_cmd $::DuckHunt::shooting_cmd $::DuckHunt::shooting_cmd2 $::DuckHunt::shooting_cmd3"
+	set relayCMDs "$::DuckHunt::shop_cmd $::DuckHunt::stat_cmd $::DuckHunt::lastduck_pub_cmd $::DuckHunt::reload_cmd $::DuckHunt::shooting_cmd $::DuckHunt::shooting_cmd2 $::DuckHunt::shooting_cmd3 $::DuckHunt::shooting_cmd4 $::DuckHunt::shooting_cmd5 $::DuckHunt::shooting_cmd6"
 	set s [split $relayCMDs]
 	foreach e $s {
 		if {[string first $e $arg] != -1} {
@@ -504,10 +504,11 @@ proc ::DuckHunt::shoot_relay {nick host hand chan arg} {
 	if {($::DuckHunt::shooting_cmd == $cmdAct)
 		|| ($::DuckHunt::shooting_cmd2 == $cmdAct)
 		|| ($::DuckHunt::shooting_cmd3 == $cmdAct)
+		|| ($::DuckHunt::shooting_cmd4 == $cmdAct)
+		|| ($::DuckHunt::shooting_cmd5 == $cmdAct)
+		|| ($::DuckHunt::shooting_cmd6 == $cmdAct)
 		} then {			
-			::DuckHunt::shoot $nick $host $hand $chan $arg
-	} elseif {$::DuckHunt::no_shooting_cmd == $cmdAct 
-		} then {::DuckHunt::no_shoot $nick $host $hand $chan $arg  		
+			::DuckHunt::shoot $nick $host $hand $chan $arg		
 	} elseif {$::DuckHunt::reload_cmd == $cmdAct 
 		} then {::DuckHunt::reload_gun $nick $host $hand $chan $arg
 	} elseif {$::DuckHunt::lastduck_pub_cmd == $cmdAct 
