@@ -1894,7 +1894,7 @@ proc ::DuckHunt::calculate_karma {wild_shots humans_shot ducks_shot short} {
 ### d'acheter ou effectue un achat si id est sp�cifi�.
  ###############################################################################
 proc ::DuckHunt::shop {nick host hand chan arg} {
-	::DuckHunt::display_output loglev - -  "shop"
+	#::DuckHunt::display_output loglev - -  "shop"
 	
 	set lower_nick [::tcl::string::tolower $nick]
 	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
@@ -2024,7 +2024,8 @@ proc ::DuckHunt::shop {nick host hand chan arg} {
 										::DuckHunt::add_to_log $chan $current_time $nick $lower_nick - - "item_2" 0 -
 									}
 									# Message : "%s > Tu viens d'ajouter un chargeur � ta r�serve en �change de %s %s."
-									set output ["$nick > You just added a magazine to $target_nick\'s supply in exchange for" $::DuckHunt::extra_ammo_cost [::DuckHunt::plural $::DuckHunt::extra_ammo_cost [::msgcat::mc m285] [::msgcat::mc m286]]]
+									# set output ["$nick > You just added a magazine to $target_nick\'s supply in exchange for $::DuckHunt::extra_ammo_cost" [::DuckHunt::plural $::DuckHunt::extra_ammo_cost [::msgcat::mc m285] [::msgcat::mc m286]]]
+									set output [::msgcat::mc m268b $nick $target_nick $::DuckHunt::extra_ammo_cost [::DuckHunt::plural $::DuckHunt::extra_ammo_cost [::msgcat::mc m285] [::msgcat::mc m286]]]
 									set must_write_db 1
 								}
 								
