@@ -5,7 +5,7 @@ This was originally written by MenzAgitat, you can find his versions here https:
 
 Installing
 -----
-* Place both th etcl script and the DIR from the git in you /eggdrop/scripts/ dir.
+* Place both th etcl script and the dir from the git in you /eggdrop/scripts/ dir.
 * Add `source scripts/Duck_Hunt.tcl` to you eggdrop.conf file
 * Start your duck hunt. or if its already running use the Partyline and rehash your eggdrop
 * In the Partyline:
