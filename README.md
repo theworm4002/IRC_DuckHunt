@@ -7,12 +7,12 @@ Installing
 -----
 * Place both th etcl script and the DIR from the git in you /eggdrop/scripts/ dir.
 * Add `source scripts/Duck_Hunt.tcl` to you eggdrop.conf file
-* Start or use the Partyline and rehash your eggdrop
-* In the Partyline use:
+* Start your duck hunt. or if its already running use the Partyline and rehash your eggdrop
+* In the Partyline:
 * to activate Duckhunt
-* .chanset #ChanName +DuckHunt
+* `.chanset #ChanName +DuckHunt`
 * to deactivate Duckhunt
-* .chanset #ChanName -DuckHunt
+* `.chanset #ChanName -DuckHunt`
 
 
 Added
