@@ -2,7 +2,7 @@
 #
 # Duck Hunt
 # v2.11 (11/04/2016)  �2015-2016 Menz Agitat
-# v2.15 (12/18/22) Worm
+# v2.16 (20230405) Worm
 #
 # IRC: irc.epiknet.org  #boulets / #eggdrop
 #
@@ -86,7 +86,7 @@ namespace eval ::DuckHunt {
 	### Initialisation
 	 #############################################################################
 	variable scriptname "Duck Hunt"
-	variable version "2.15.20221231"
+	variable version "2.16.20230405"
 	setudef flag DuckHunt
 	setudef str DuckHunt-LastDuck
 	setudef str DuckHunt-PiecesOfBread
@@ -237,6 +237,8 @@ proc ::DuckHunt::plan_out_flights {args} {
 				&& ($::DuckHunt::post_init_done)
 			} then {
 				set current_time [strftime "%H,%M" [unixtime]]
+
+
 				foreach scanned_time [lsort [::tcl::dict::get $::DuckHunt::planned_soarings $chan]] {
 					if { [regsub {:} $scanned_time {,}] > $current_time } {
 						set time_to_keep $scanned_time
@@ -244,6 +246,7 @@ proc ::DuckHunt::plan_out_flights {args} {
 					}
 				}
 			}
+
 			::tcl::dict::set ::DuckHunt::planned_soarings $chan {}
 			for { set duck_number 1 } { $duck_number <= $ducks_per_day } { incr duck_number } {
 				if {
@@ -268,10 +271,13 @@ proc ::DuckHunt::plan_out_flights {args} {
 					}
 				}
 				set current_bind [list time "-|-" "$chosen_minutes $chosen_hour * * *" [list ::DuckHunt::duck_soaring $chan - 0 -]]
+
+                ::DuckHunt::display_output loglev - -  "current_bind: $current_bind"
 				# Si un bind existe d�j� � cette heure, on modifie les minutes.
 				while { $current_bind in [::tcl::dict::get $::DuckHunt::binds_tables $chan] } {
 					set current_bind [list time "-|-" "[set chosen_minutes [lindex {00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59} [rand 60]]] $chosen_hour * * *" [list ::DuckHunt::duck_soaring $chan - 0 -]]
 				}
+                ::DuckHunt::display_output loglev - -  "current_bind2: $current_bind"
 				bind {*}$current_bind
 				::tcl::dict::lappend ::DuckHunt::binds_tables $chan $current_bind
 				::tcl::dict::lappend ::DuckHunt::planned_soarings $chan "${chosen_hour}:$chosen_minutes"
@@ -281,13 +287,13 @@ proc ::DuckHunt::plan_out_flights {args} {
 }
 
  ###############################################################################
-### Un canard s'envole.
-### $args re�oit 4 arguments pour un lancement manuel : {chan is_golden_duck is_fake_duck fake_duck_author}
-### ou 9 pour un lancement auto : {chan is_golden_duck is_fake_duck fake_duck_author min hour day month year}
-### Is_golden_duck peut valoir 0, 1 ou -
-### Si is_golden_duck vaut - alors on d�cide al�atoirement.
-### Is_fake_duck peut valoir 0 ou 1
-### Fake_duck_author contient le nom du joueur qui a achet� le faux canard.
+### A duck flies away.
+### $args receives 4 arguments for a manual launch: {chan is_golden_duck is_fake_duck fake_duck_author}
+### or 9 for an auto launch: {chan is_golden_duck is_fake_duck fake_duck_author min hour day month year}
+### Is_golden_duck can be 0, 1 or -
+### If is_golden_duck is - then we decide randomly.
+### Is_fake_duck can be 0 or 1
+### Fake_duck_author contains the name of the player who purchased the fake duck.
  ###############################################################################
 proc ::DuckHunt::duck_soaring {args} {
 	lassign $args chan is_golden_duck is_fake_duck fake_duck_author
@@ -336,6 +342,15 @@ proc ::DuckHunt::duck_soaring {args} {
 			}
 			if { $some_players_have_been_warned } {
 				::DuckHunt::write_database
+				#  Get time and offset 1 min for new launch time
+				set currentSystemTime [clock seconds]
+				set currentSystemTimePlus [clock add $currentSystemTime 1 minutes]
+				set hrPlus1 [clock format $currentSystemTimePlus -format %H]
+				set minPlus1 [clock format $currentSystemTimePlus -format %M]
+				set new_bind [list time "-|-" "$minPlus1 $hrPlus1 * * *" [list ::DuckHunt::duck_soaring $chan $is_golden_duck 0 -]]
+				::DuckHunt::display_output loglev - -  "new_bind: $new_bind"
+				bind {*}$new_bind
+				return
 			}
 		}
 		::DuckHunt::purge_db_from_memory
@@ -4492,6 +4507,130 @@ proc ::DuckHunt::post_init {} {
 	set ::DuckHunt::post_init_done 1	
 }
 
+
+ ###############################################################################
+### help Msg
+ ###############################################################################
+proc ::DuckHunt::help_cmd {nick host hand arg} {
+    set output_method "PRIVMSG"
+	lassign [set args [split [::tcl::string::trim $arg]]] fullHelp 
+	if { $fullHelp != "full" } then {
+        ::DuckHunt::display_output help $output_method $nick "To get a more detailed list use 'help full'"
+        ::DuckHunt::display_output help $output_method $nick "\00307Channel commands\003: $::DuckHunt::shooting_cmd, $::DuckHunt::reload_cmd, $::DuckHunt::lastduck_pub_cmd, $::DuckHunt::stat_cmd, $::DuckHunt::topDuck_cmd, $::DuckHunt::shop_cmd"              
+    } else {
+        # ::DuckHunt::display_output help NOTICE $nick "\00307Channel commands\003"
+        ::DuckHunt::display_output help $output_method $nick "\00307Channel commands\003"
+        ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::shooting_cmd:\002\003 Command used to shoot a duck. Don\’t forget that sometimes, mistakes happen and you can miss the ducks… Or worse. Alts: !meow, !bef, !weed" 
+        ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::reload_cmd:\002\003 Reloads or unjams your weapon. You must have chargers left if you want to reload. They are given back for free everyday, but you can also buy them in the shop."
+        ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::lastduck_pub_cmd:\002\003 	Displays the last seen duck"
+        ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::stat_cmd:\002\003 Gets your or another player hunting statistics."
+        ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::topDuck_cmd:\002\003 Shows the top 5 players."
+        ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::shop_cmd:\002\003 You can buy objects with the command !shop {item number} {possible arguments, such as the @target nickname} You need to have enough exp to buy an item."
+    }
+	
+	if { $hand != "*" } then {
+        set nickCanUnarm [matchattr $hand $::DuckHunt::unarm_auth ] 
+        set nickCanRearm [matchattr $hand $::DuckHunt::rearm_auth ]
+        set nickCanfindplayer [matchattr $hand $::DuckHunt::findplayer_auth ]
+        set nickCanFuss [matchattr $hand $::DuckHunt::fusion_auth ]
+        set nickCanRename [matchattr $hand $::DuckHunt::rename_auth ]
+        set nickCanDel [matchattr $hand $::DuckHunt::delete_auth ]
+        set nickCanLaunch [matchattr $hand $::DuckHunt::launch_auth ]
+        set nickCanExport [matchattr $hand $::DuckHunt::export_auth ]
+        set nickCanPlan [matchattr $hand $::DuckHunt::planning_auth ]
+        set nickCanReplan [matchattr $hand $::DuckHunt::replanning_auth ]  
+
+        if { $fullHelp != "full" } then { 
+            set helpMsg {}
+
+            if { $nickCanUnarm || $nickCanRearm } then { 
+                lappend helpMsg "\00307Admin commands\003"
+                if { $nickCanUnarm } then { 
+                    lappend helpMsg "$::DuckHunt::unarm_cmd $::DuckHunt::unarm_cmd2"  
+                    }
+                if { $nickCanRearm } then { 
+                    lappend helpMsg "$::DuckHunt::rearm_cmd" 
+                    }
+                }
+            
+            ::DuckHunt::display_output help $output_method $nick "[join $helpMsg]"
+
+            set helpMsg {}
+            if { $nickCanfindplayer || $nickCanFuss || $nickCanRename || $nickCanDel
+                || $nickCanLaunch || $nickCanExport || $nickCanPlan || $nickCanReplan } then {
+                    lappend helpMsg "\00307Admin commands to be sent to bot in a PRIVMSG\003"    
+                }        
+            if { $nickCanfindplayer } then { 
+                lappend helpMsg "$::DuckHunt::findplayer_cmd"  
+                }
+            if { $nickCanFuss } then { 
+                lappend helpMsg "$::DuckHunt::fusion_cmd"  
+                }
+            if { $nickCanRename } then { 
+                lappend helpMsg "$::DuckHunt::rename_cmd"  
+                }
+            if { $nickCanDel } then { 
+                lappend helpMsg "$::DuckHunt::delete_cmd"  
+                }
+            if { $nickCanLaunch } then { 
+                lappend helpMsg "$::DuckHunt::launch_cmd"  
+                }
+            if { $nickCanExport } then { 
+                lappend helpMsg "$::DuckHunt::export_cmd"  
+                }
+            if { $nickCanPlan } then { 
+                lappend helpMsg "$::DuckHunt::planning_cmd"  
+                }
+            if { $nickCanReplan } then { 
+                lappend helpMsg "$::DuckHunt::replanning_cmd"  
+                }  
+        ::DuckHunt::display_output help $output_method $nick "[join $helpMsg]" 
+
+        } else {
+
+            if { $nickCanUnarm || $nickCanRearm } then { 
+                ::DuckHunt::display_output help $output_method $nick "\00307Admin commands\003"
+                if { $nickCanUnarm } then { 
+                    ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::unarm_cmd or $::DuckHunt::unarm_cmd2:\002\003 "  
+                    }
+                if { $nickCanRearm } then { 
+                    ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::rearm_cmd:\002\003 " 
+                    }
+                }
+
+            if { $nickCanfindplayer || $nickCanFuss || $nickCanRename || $nickCanDel
+                || $nickCanLaunch || $nickCanExport || $nickCanPlan || $nickCanReplan } then {
+                    ::DuckHunt::display_output help $output_method $nick "\00307Admin commands to be sent to bot in a PRIVMSG\003"    
+                }        
+            if { $nickCanfindplayer } then { 
+                ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::findplayer_cmd:\002\003 "  
+                }
+            if { $nickCanFuss } then { 
+                ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::fusion_cmd:\002\003 "  
+                }
+            if { $nickCanRename } then { 
+                ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::rename_cmd:\002\003 "  
+                }
+            if { $nickCanDel } then { 
+                ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::delete_cmd:\002\003 "  
+                }
+            if { $nickCanLaunch } then { 
+                ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::launch_cmd:\002\003 "  
+                }
+            if { $nickCanExport } then { 
+                ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::export_cmd:\002\003 "  
+                }
+            if { $nickCanPlan } then { 
+                ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::planning_cmd:\002\003 "  
+                }
+            if { $nickCanReplan } then { 
+                ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::replanning_cmd:\002\003 "  
+                }     
+        }
+
+    }
+}
+
  ###############################################################################
 ### Binds
  ###############################################################################
@@ -4528,8 +4667,10 @@ bind pub $::DuckHunt::reload_auth $::DuckHunt::reload_cmd ::DuckHunt::reload_gun
 bind pub $::DuckHunt::lastduck_pub_auth $::DuckHunt::lastduck_pub_cmd ::DuckHunt::pub_show_last_duck
 bind msg $::DuckHunt::lastduck_msg_auth $::DuckHunt::lastduck_msg_cmd ::DuckHunt::msg_show_last_duck
 bind pub $::DuckHunt::stat_auth $::DuckHunt::stat_cmd ::DuckHunt::display_stats
-bind pub $::DuckHunt::duckHelp_auth $::DuckHunt::duckHelp_cmd ::DuckHunt::display_duckHelp
 bind pub $::DuckHunt::topDuck_auth $::DuckHunt::topDuck_cmd ::DuckHunt::display_topDuck
+
+bind msg -|- help ::DuckHunt::help_cmd
+bind pub $::DuckHunt::duckHelp_auth $::DuckHunt::duckHelp_cmd ::DuckHunt::display_duckHelp
 if { $::DuckHunt::shop_enabled } {
 	bind pub $::DuckHunt::shop_auth $::DuckHunt::shop_cmd ::DuckHunt::shop
 }
@@ -4545,6 +4686,9 @@ bind msg $::DuckHunt::export_auth $::DuckHunt::export_cmd ::DuckHunt::export_pla
 bind nick -|- * ::DuckHunt::nickchange_tracking
 bind part -|- * ::DuckHunt::update_nickchange_tracking
 bind sign -|- * ::DuckHunt::update_nickchange_tracking
+
+
+
 
 
 #	Message : "%s v%s (�2015-2016 Menz Agitat) a �t� charg�."
