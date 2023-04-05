@@ -16,8 +16,8 @@ Installing
 
 Ver 2.16
 -----
-* throttling override for owners New help msg
-* Fixed the preducklaunch msg, the duck detector did not notify the user with ample time.
+* Added new help msg
+* Fixed the preducklaunch msg the duck detector did not notify the user with ample time.
 
 Ver 2.15
 -----
