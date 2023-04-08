@@ -1,46 +1,39 @@
- ###############################################################################
+##############################################################################
 #
 # Duck Hunt
-# v2.11 (11/04/2016)  �2015-2016 Menz Agitat
+# v2.11 (11/04/2016)  ©2015-2016 Menz Agitat
 # v2.16 (20230405) Worm
-#
 # IRC: irc.epiknet.org  #boulets / #eggdrop
 #
-# Mes scripts sont t�l�chargeables sur http://www.eggdrop.fr
-# Retrouvez aussi toute l'actualit� de mes releases sur
+# My scripts can be downloaded from http://www.eggdrop.fr
+# You can also find all the latest news about my releases on
 # http://www.boulets.oqp.me/tcl/scripts/index.html
 #
-# Remerciements � Mon qui m'a donn� l'id�e de faire ce script, � Destiny pour le
-# beta-testing intensif et pas mal d'id�es, et � Fr�d�ric pour aussi pas mal
-# d'id�es et la r�alisation du background inclus (duck_background.png).
+# Thanks to Mon for giving me the idea for this script, to Destiny for
+# intensive beta-testing and lots of ideas, and to Frédéric for lots of
+# ideas and for creating the included background (duck_background.png).
 #
- ###############################################################################
+##############################################################################
 
 #
 # Description
 #
-# Duck Hunt est un FPS pour IRC.
-# De temps en temps, un canard s'envole et les joueurs doivent l'abattre le plus
-# rapidement possible.
+# Duck Hunt is an IRC-based FPS game.
+# Occasionally, a duck will fly by and players must shoot it down as quickly as possible.
 #
-# Veuillez v�rifier que les param�tres de la section configuration ci-dessous
-#	vous conviennent, de m�me que les param�tres que contiennent le fichier
-# Duck_Hunt.cfg.
+# Please ensure that the settings in the configuration section below
+# are suitable for your use, as well as the settings contained in the
+# Duck_Hunt.cfg file.
 #
  ###############################################################################
 
 #
-# Licence
-#
-#		Cette cr�ation est mise � disposition selon le Contrat
-#		Attribution-NonCommercial-ShareAlike 3.0 Unported disponible en ligne
-#		http://creativecommons.org/licenses/by-nc-sa/3.0/ ou par courrier postal �
-#		Creative Commons, 171 Second Street, Suite 300, San Francisco, California
-#		94105, USA.
-#		Vous pouvez �galement consulter la version fran�aise ici :
-#		http://creativecommons.org/licenses/by-nc-sa/3.0/deed.fr
-#
- ###############################################################################
+# This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+# To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/3.0/ or send a letter to
+# Creative Commons, 171 Second Street, Suite 300, San Francisco, California 94105, USA.
+# You may also view the French version of this license here:
+# http://creativecommons.org/licenses/by-nc-sa/3.0/deed.fr
+###############################################################################
 
 if {[::tcl::info::commands ::DuckHunt::uninstall] eq "::DuckHunt::uninstall"} { ::DuckHunt::uninstall }
 if { [catch { package require Tcl 8.5 }] } { putloglev o * "\00304\[Duck Hunt - erreur\]\003 Duck Hunt n�cessite que Tcl 8.5 (ou plus) soit install� pour fonctionner. Votre version actuelle de Tcl est\00304 ${::tcl_version}\003." ; return }
