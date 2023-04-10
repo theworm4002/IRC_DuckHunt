@@ -1,9 +1,9 @@
 ##############################################################################
 #
 # Duck Hunt
-# v2.11 (11/04/2016)  ©2015-2016 Menz Agitat
-# v2.16 (20230405) Worm
-# IRC: irc.epiknet.org  #boulets / #eggdrop
+# v2.11 (11/04/2016)  ©2015-2016 Menz Agitat, IRC: irc.epiknet.org  #boulets / #eggdrop
+# v2.16 (20230405) Worm, IRC: irc.rizon.net  #duckhunt
+# 
 #
 # My scripts can be downloaded from http://www.eggdrop.fr
 # You can also find all the latest news about my releases on
