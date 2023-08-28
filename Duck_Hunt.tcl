@@ -2,7 +2,7 @@
 #
 # Duck Hunt
 # v2.11 (11/04/2016)  ©2015-2016 Menz Agitat, IRC: irc.epiknet.org  #boulets / #eggdrop
-# v2.16 (20230405) Worm, IRC: irc.rizon.net  #duckhunt
+# v2.16.20230823 (20230828) Worm, IRC: irc.rizon.net  #duckhunt
 # 
 #
 # My scripts can be downloaded from http://www.eggdrop.fr
@@ -33,7 +33,7 @@
 # Creative Commons, 171 Second Street, Suite 300, San Francisco, California 94105, USA.
 # You may also view the French version of this license here:
 # http://creativecommons.org/licenses/by-nc-sa/3.0/deed.fr
-###############################################################################
+ ###############################################################################
 
 if {[::tcl::info::commands ::DuckHunt::uninstall] eq "::DuckHunt::uninstall"} { ::DuckHunt::uninstall }
 if { [catch { package require Tcl 8.5 }] } { putloglev o * "\00304\[Duck Hunt - erreur\]\003 Duck Hunt n�cessite que Tcl 8.5 (ou plus) soit install� pour fonctionner. Votre version actuelle de Tcl est\00304 ${::tcl_version}\003." ; return }
@@ -51,12 +51,12 @@ namespace eval ::DuckHunt {
 	
 	#####  LANGUE  ###############################################################
 
-	# Langue des messages du script ( fr = fran�ais / en = english )
-	# Remarque : Il s'agit d'un r�glage global de votre Eggdrop; ce param�tre est
-	#	mis ici pour vous en faciliter l'acc�s mais vous devez veiller � ce qu'il
-	# soit r�gl� de la m�me mani�re partout.
-	# Concr�tement, vous ne pouvez pas d�finir la langue d'un script sur "fr" et
-	# celle d'un autre sur "en".
+# Language of script messages ( fr = French / en = english )
+# Note: This is a global setting for your Eggdrop; this parameter is
+# put here for easy access but you must ensure that it
+# is set the same way everywhere.
+# Concretely, you cannot set the language of a script to "fr" and
+# that of another on "en".
 	::msgcat::mclocale "en"
 
 	# Emplacement des fichiers de langue.
@@ -79,7 +79,7 @@ namespace eval ::DuckHunt {
 	### Initialisation
 	 #############################################################################
 	variable scriptname "Duck Hunt"
-	variable version "2.16.20230405"
+	variable version "2.16.20230823"
 	setudef flag DuckHunt
 	setudef str DuckHunt-LastDuck
 	setudef str DuckHunt-PiecesOfBread
@@ -449,9 +449,13 @@ proc ::DuckHunt::terminate_duck_session {chan has_been_shot} {
 ### !relay computertech : A player shoots. 
  ###############################################################################
 proc ::DuckHunt::shoot_relay {nick host hand chan arg} {
+	# Make sure the user sending this is the relay bot before doing more
+	if { $nick != $::DuckHunt::relay_bot_nick } { return }
+
+	# Make sure the text sent starts with a cmd before doing more
 	set relayCMD_chk {}
 	set relayCMDs "$::DuckHunt::shop_cmd $::DuckHunt::stat_cmd $::DuckHunt::lastduck_pub_cmd $::DuckHunt::reload_cmd $::DuckHunt::shooting_cmd $::DuckHunt::shooting_cmd2 $::DuckHunt::shooting_cmd3 $::DuckHunt::shooting_cmd4 $::DuckHunt::shooting_cmd5 $::DuckHunt::shooting_cmd6"
-	set s [split $relayCMDs]
+	set s [split $relayCMDs]	
 	foreach e $s {
 		if {[string first $e $arg] != -1} {
 			set relayCMD_chk "true"
@@ -4009,12 +4013,10 @@ proc ::DuckHunt::merge_stats {chan src_nick lower_src_nick dst_nick lower_dst_ni
 }
 
  ###############################################################################
-### Affichage d'un texte, filtrage des styles si n�cessaire.
-### * queue peut valoir help, quick, now, serv, dcc, log ou loglev
-### * method peut valoir PRIVMSG ou NOTICE et sera ignor� si queue vaut dcc ou
-###      loglev
-### * target peut �tre un nick, un chan ou un idx, et sera ignor� si queue vaut
-###      loglev
+### Displaying text, filtering styles if necessary.
+### * queue can be help, quick, now, serv, dcc, log or loglev
+### * method can be PRIVMSG or NOTICE and will be ignored if queue is dcc or loglev
+### * target can be a nick, chan or idx, and will be ignored if queue is loglev
  ###############################################################################
 proc ::DuckHunt::display_output {queue method target text} {
 	if {
@@ -4024,9 +4026,9 @@ proc ::DuckHunt::display_output {queue method target text} {
 		|| (($queue eq "dcc")
 		&& (![matchattr [idx2hand $target] h]))
 	} then {
-		# Remarque : l'aller-retour d'encodage permet de contourner un bug d'Eggdrop
-		# qui corromp le charset dans certaines conditions lors de l'utilisation de
-		# regsub sur une cha�ne de caract�res.
+		# Note: round trip encoding works around an Eggdrop bug
+		# which corrupts the charset under certain conditions when using
+		# regsub on a character string.
 		regsub -all "\017" [stripcodes abcgru [encoding convertto utf-8 [encoding convertfrom utf-8 $text]]] "" text
 	}
 	switch -- $queue {
@@ -4621,6 +4623,7 @@ proc ::DuckHunt::help_cmd {nick host hand arg} {
     }
 }
 
+
  ###############################################################################
 ### Binds
  ###############################################################################
@@ -4676,9 +4679,6 @@ bind msg $::DuckHunt::export_auth $::DuckHunt::export_cmd ::DuckHunt::export_pla
 bind nick -|- * ::DuckHunt::nickchange_tracking
 bind part -|- * ::DuckHunt::update_nickchange_tracking
 bind sign -|- * ::DuckHunt::update_nickchange_tracking
-
-
-
 
 
 #	Message : "%s v%s (�2015-2016 Menz Agitat) a �t� charg�."
