@@ -9,10 +9,10 @@ Installing
 * Add `source scripts/Duck_Hunt.tcl` to you eggdrop.conf file
 * Start your duck hunt. Or if it's already running use the Partyline and rehash your eggdrop.
 * To activate Duckhunt
-*   In the Partyline: `.chanset #ChanName +DuckHunt`
+* *   In the Partyline: `.chanset #ChanName +DuckHunt`
 *   Then give the bot at least voice in your channel
 * To deactivate Duckhunt
-*   In the Partyline: `.chanset #ChanName -DuckHunt`
+**    In the Partyline: `.chanset #ChanName -DuckHunt`
 
 Ver 2.16.20230823
 -----
