@@ -5,14 +5,14 @@ This was originally written by MenzAgitat, you can find his versions here https:
 
 Installing
 -----
-* Place both th etcl script and the dir from the git in you /eggdrop/scripts/ dir.
+* Place both the tcl script and the dir from the git in your /eggdrop/scripts/ dir.
 * Add `source scripts/Duck_Hunt.tcl` to you eggdrop.conf file
-* Start your duck hunt. or if its already running use the Partyline and rehash your eggdrop
-* In the Partyline:
-* to activate Duckhunt
-* `.chanset #ChanName +DuckHunt`
-* to deactivate Duckhunt
-* `.chanset #ChanName -DuckHunt`
+* Start your duck hunt. Or if it's already running use the Partyline and rehash your eggdrop.
+* To activate Duckhunt
+*   In the Partyline: `.chanset #ChanName +DuckHunt`
+*   Then give the bot at least voice in your channel
+* To deactivate Duckhunt
+*   In the Partyline: `.chanset #ChanName -DuckHunt`
 
 Ver 2.16.20230823
 -----
