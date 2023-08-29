@@ -14,6 +14,10 @@ Installing
 * to deactivate Duckhunt
 * `.chanset #ChanName -DuckHunt`
 
+Ver 2.16.20230823
+-----
+* Small fix to block anyone from acting like the relay bot.
+  
 Ver 0.2.16a
 -----
 * Incresed player lvl to 100
