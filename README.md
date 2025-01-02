@@ -21,9 +21,9 @@ Ver 2.16.20250102
 -----
 * added option to turn off nick tracing
 * new topduck options
-** 'top#' where the # is the # of players to return 
-** '#channel' to return a different channels topduck 
-** 'ducks' to get the list of players with the most ducks shot
+  - 'top#' where the # is the # of players to return 
+  - '#channel' to return a different channels topduck 
+  - 'ducks' to get the list of players with the most ducks shot
   
 Ver 2.16.20230823
 -----
