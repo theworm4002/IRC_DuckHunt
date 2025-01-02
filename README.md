@@ -19,8 +19,8 @@ Installing
 
 Ver 2.16.20250102
 -----
-* added option to turn off nick tracing
-* new topduck options
+* Added option to turn on/off nick tracking 'nick_tracking_enabled'
+* New topduck options
   - 'top#' where the # is the # of players to return 
   - '#channel' to return a different channels topduck 
   - 'ducks' to get the list of players with the most ducks shot
