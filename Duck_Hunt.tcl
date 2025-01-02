@@ -2,7 +2,7 @@
 #
 # Duck Hunt
 # v2.11 (11/04/2016)  ©2015-2016 Menz Agitat, IRC: irc.epiknet.org  #boulets / #eggdrop
-# v2.16.20230823 (20230828) Worm, IRC: irc.rizon.net  #duckhunt
+# v2.16.20250102 Worm, IRC: irc.rizon.net  #duckhunt
 # 
 #
 # My scripts can be downloaded from http://www.eggdrop.fr
@@ -1590,6 +1590,161 @@ proc ::DuckHunt::msg_show_last_duck {nick host hand arg} {
 }
 
  ###############################################################################
+### !allstats:  floods you with all players stats
+ ###############################################################################
+ proc ::DuckHunt::display_allStatsPM {nick host hand arg} {
+	if { [set arg [::tcl::string::trim $arg]] ne "" } {
+		set chan [::tcl::string::tolower $arg] 
+		::DuckHunt::display_allStats $nick $host $hand $chan $arg
+	} else {	
+		::DuckHunt::display_output help "PRIVMSG" "$nick" "You need to tell me the Channel."
+	}
+ }	
+ proc ::DuckHunt::display_allStats {nick host hand chan arg} {	
+	set lower_nick [::tcl::string::tolower $nick]
+	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
+		variable canNickFlood 0
+	} else {
+		 variable canNickFlood $::DuckHunt::antiflood
+	}
+	
+	if {
+		(![channel get $chan DuckHunt])
+		|| ($hand in $::DuckHunt::blacklisted_handles)
+		|| (($canNickFlood == 1)
+		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::topDuck_cmd $::DuckHunt::flood_stats])
+		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
+	} then {
+		return
+	} else {
+		set targetChan $chan
+		if { [set arg [::tcl::string::trim $arg]] ne "" } {
+			set chan [::tcl::string::tolower $arg]
+		} 
+        
+        ::DuckHunt::read_database
+        set hunters_list [lsort [::tcl::dict::keys [::tcl::dict::get $::DuckHunt::player_data $chan]]]
+
+		if { $hunters_list ne "" } {
+			set output_method "PRIVMSG"
+			set output_target $nick
+
+			::DuckHunt::display_output help $output_method $output_target "START of allstats flood for $chan"
+
+			foreach hunter $hunters_list {
+				set target $hunter
+				set lower_target $hunter
+				::DuckHunt::ckeck_for_pending_rename $chan $target $lower_target [md5 "$chan,$lower_target"]
+				foreach varname {gun jammed current_ammo_clip remaining_ammo_clips xp ducks_shot golden_ducks_shot missed_shots empty_shots humans_shot wild_shots bullets_received deflected_bullets deaths confiscated_weapons jammed_weapons best_time cumul_reflex_time items} {
+					set $varname [::DuckHunt::get_data $lower_target $chan $varname]
+				}
+				# Aucune entr�e n'existe � ce nom dans la base de donn�es, on prend les
+				# valeurs par d�faut.
+				if {
+					!([::tcl::dict::exists $::DuckHunt::player_data $chan])
+					|| !([::tcl::dict::exists $::DuckHunt::player_data $chan $lower_target])
+				} then {
+					lassign [::DuckHunt::get_level_and_grantings 0] level required_xp accuracy deflection defense jamming ammos_per_clip ammo_clips {} {} {}
+				# Il existe une entr�e pour ce joueur dans la base de donn�es.
+				} else {
+					lassign [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_target $chan "xp"]] level required_xp accuracy deflection defense jamming ammos_per_clip ammo_clips {} {} {}
+				}
+				set rank [::DuckHunt::lvl2rank $level]
+				set neutralized_bullets [expr {$bullets_received - $deaths - $deflected_bullets}]
+				set reliability [expr {100 - $jamming}]
+				# Le joueur a graiss� son arme.
+				if { [lindex [::DuckHunt::get_item_info $lower_target $chan "6"] 0] != -1 } {
+					append reliability_modifier "\00303+[expr {int((100 - $reliability) / 2)}]%\003"
+				} else {
+					append reliability_modifier ""
+				}
+				# Le joueur a du sable dans son arme.
+				if { [lindex [::DuckHunt::get_item_info $lower_target $chan "15"] 0] != -1 } {
+					append reliability_modifier "\00304-[expr {int($reliability / 2)}]%\003"
+				} else {
+					append reliability_modifier ""
+				}
+				if { $best_time == -1 } {
+					set best_time "-"
+				} else {
+					set best_time [::DuckHunt::adapt_time_resolution [::tcl::string::map {"." ""} $best_time] 1]
+				}
+				if { $ducks_shot != 0 } {
+					set average_reflex_time [::DuckHunt::adapt_time_resolution [::tcl::string::map {"." ""} [format "%.3f" [expr {($cumul_reflex_time / 1000.0) / $ducks_shot}]]] 1]
+				} else {
+					set average_reflex_time "-"
+				}
+				if { $jammed == 1 } {
+					# Texte : "\00304oui\003"
+					set jammed [::msgcat::mc m37]
+				} else {
+					# Texte : "non"
+					set jammed [::msgcat::mc m38]
+				}
+				if { $gun <= 0 } {
+					# Texte : "\00304oui\003"
+					set confiscated [::msgcat::mc m37]
+				} else {
+					# Texte : "non"
+					set confiscated [::msgcat::mc m38]
+				}
+				set xp_to_lvlup [expr {$required_xp - $xp}]
+				set total_fired_ammo [expr {$ducks_shot + $missed_shots}]
+				if { $total_fired_ammo != 0 } {
+					set effective_accuracy "[expr {(100 * $ducks_shot) / $total_fired_ammo}]%"
+				} else {
+					set effective_accuracy "-"
+				}
+				# Le joueur est �bloui.
+				if { [set item_index [lindex [::DuckHunt::get_item_info $lower_target $chan "14"] 0]] != -1 } {
+					append accuracy_modifier "\00304-[expr {int($accuracy / 2)}]%\003"
+				} else {
+					append accuracy_modifier ""
+				}
+				# Le joueur a install� une lunette de vis�e sur son arme.
+				if { [set item_index [lindex [::DuckHunt::get_item_info $lower_target $chan "7"] 0]] != -1 } {
+					append accuracy_modifier "\00303+[expr {int((100 - $accuracy) / 3)}]%\003"
+				} else {
+					append accuracy_modifier ""
+				}
+				set items_list ""
+				set effects_list ""
+				# Texts: "Mun. AP" "Mun. expl." "Grease" "Riflescope" "Infrared Detector" "Silencer" "4 Leaf Clover" "Sunglasses" "Life Ass." "Civilian Resp. Ass." ducks" "Dazzled" "Sand" "Drenched" "Hooded"
+				set item_names [list 3 [::msgcat::mc m370] 4 [::msgcat::mc m371] 6 [::msgcat::mc m372] 7 [::msgcat::mc m373] 8 [::msgcat::mc m374] 9 [::msgcat::mc m375] 10 [::msgcat::mc m376] 11 [::msgcat::mc m377] 14 [::msgcat::mc m381] 15 [::msgcat::mc m382] 16 [::msgcat::mc m383] 17 [::msgcat::mc m384] 18 [::msgcat::mc m378] 19 [::msgcat::mc m379] 22 [::msgcat::mc m380]]
+				foreach item $items {
+					if { [set item_id [lindex $item 1]] in {3 4 6 7 8 9 10 11 18 19 22} } {
+						lappend items_list [::tcl::dict::get $item_names $item_id]
+					} elseif { $item_id in {14 15 16 17} } {
+						lappend effects_list [::tcl::dict::get $item_names $item_id]
+					}
+				}
+				if { $items_list ne "" } {
+					# Texte : "\00307\002  \[\037Inventaire\037\]\002\003  %s"
+					set items_list [::msgcat::mc m385 [join $items_list " \00314/\003 "]]
+				}
+				if { $effects_list ne "" } {
+					# Texte : "\00307\002  \[\037Effets\037\]\002\003  %s"
+					set effects_list [::msgcat::mc m386 [join $effects_list " \00314/\003 "]]
+				}
+				set karma [::DuckHunt::calculate_karma $wild_shots $humans_shot $ducks_shot 0]
+				# Message : "\00307\002\[\037Arme\037\]\002\003  mun. : %s \00307|\003 charg. : %s \00307|\003 enray. : %s (%s fois) \00307|\003 confisq. : %s (%s fois)\00307\002  \[\037Profil\037\]\002\003  %s XP \00307|\003 lvl %s (%s) / encore %s %s d'XP avant lvl sup. \00307|\003 karma : %s  \00307\002\[\037Stats\037\]\002\003  pr�cision th�or. : %s%%%s \00307|\003 effic. tirs : %s \00307|\003 fiabilit� arme : %s%%%s \00307|\003 armure : %s%% \00307|\003 d�flexion : %s%%\n\00307\002\[\037Tableau de chasse\037\]\002\003  meill. tps. : %s \00307|\003 tps. r�act. moyen : %s \00307|\003 %s %s (dont %s %s) \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s  \00307\002\[\037Accidents\037\]\002\003  re�u %s %s dont %s %s, %s %s et %s %s. "
+				# Textes : "pt" "pts" "canard" "canards" "tir manqu�" "tirs manqu�s" "accident" "accidents" "tir � vide" "tirs � vide" "tir sauvage" "tirs sauvages" "mun. utilis." "mun. utilis." "balle perdue" "balles perdues" "l�thale" "l�thales" "a ricoch�" "ont ricoch�" "a �t� encaiss�e" "ont �t� encaiss�es"
+
+				#::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
+				set msg "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
+				::DuckHunt::display_output help $output_method $output_target $msg
+				# End for hunter $hunters_list
+            } 
+			::DuckHunt::display_output help $output_method $output_target "End of allstats flood"
+			# End if { $hunters_list ne "" } 
+        }
+        ::DuckHunt::purge_db_from_memory
+		return
+    }
+}
+
+
+ ###############################################################################
 ### !topduck [chan] : 
  ###############################################################################
 proc ::DuckHunt::display_topDuck {nick host hand chan arg} {
@@ -1611,33 +1766,91 @@ proc ::DuckHunt::display_topDuck {nick host hand chan arg} {
 	} then {
 		return
 	} else {
+		if { $::DuckHunt::preferred_display_mode == 1 } then {
+			set output_method "PRIVMSG"
+			set output_target $chan
+		} else {
+			set output_method "NOTICE"
+			set output_target $nick
+		}
+
+		set topListLen 5
+		set actionType "xp"
 		set targetChan $chan
-		if { [set arg [::tcl::string::trim $arg]] ne "" } {
-			set targetChan [::tcl::string::tolower $arg]
-		} 
+		if { [set arg [::tcl::string::trim $arg]] ne "" } then {
+			# set targetChan [::tcl::string::tolower $arg]
+		 
+			# Trim the input string and split it by spaces
+			set parts [split [::tcl::string::trim $arg]]
+			if {[llength $parts] > 1 } then {
+				# Loop through parts to assign values accordingly
+				foreach part $parts {
+					if {[string match "#*" $part]} then {
+						set targetChan [::tcl::string::tolower $part]
+					} elseif {[string match "top*" $part]} then {  
+						set topListLen [expr {int([string range $part 3 end])}]
+					} else {
+						set actionType [::tcl::string::tolower $part]
+					}
+				}
+			} elseif {[llength $parts] == 1} then {
+				# If one part, determine if it's chan or actionType
+				set singlePart [lindex $parts 0]
+				if {[string match "#*" $singlePart]} then {
+						set targetChan [::tcl::string::tolower $singlePart]
+				} elseif {[string match "top*" $singlePart]} then {  					
+					set topListLen [expr {int([string range $singlePart 3 end])}]
+				} else {
+					set actionType [::tcl::string::tolower $singlePart]
+				}
+			}
+		}
         
+		set actionTypes "xp ducks"
+		if {[string first $actionType $actionTypes] == -1} then {
+			set actionType "xp"
+		}
+        
+		if {$actionType == "xp"} then {
+			set actionTypeMsg "total xp"
+		} else {
+			set actionTypeMsg "total ducks shot"
+		}
+
         ::DuckHunt::read_database
 
         set hunters_And_Xp {}
+		if {![dict exists [::tcl::dict::get $::DuckHunt::player_data ] $targetChan]} then { 
+			::DuckHunt::display_output help $output_method $output_target  "There are currently no topducks for $targetChan"
+			return	
+		} 
+
         set hunters_list [lsort [::tcl::dict::keys [::tcl::dict::get $::DuckHunt::player_data $targetChan]]]
 
-		if { $hunters_list ne "" } {
+		if { $hunters_list ne "" } then {
             set num_hunters [llength $hunters_list]
 
             set x 0
 			foreach hunter $hunters_list {
-                set hunterXP [::DuckHunt::get_data $hunter $targetChan "xp"]
-				lappend hunters_And_Xp "\00307$hunter\003 with $hunterXP xp"                
+				::DuckHunt::ckeck_for_pending_rename $chan $hunter $hunter [md5 "$chan,$hunter"]
+				if {$actionType == "xp"} then {
+					set hunterXP [::DuckHunt::get_data $hunter $targetChan $actionType]
+				} else {
+					foreach varname {ducks_shot golden_ducks_shot} {
+						set $varname [::DuckHunt::get_data $hunter $targetChan $varname]
+					}
+					set hunterXP [expr {int($ducks_shot)} + {int($golden_ducks_shot)}]
+				}
+				lappend hunters_And_Xp "\00307$hunter\003 with $hunterXP $actionTypeMsg"                
             }
 
             set TopHunters {}
             set hunters_And_Xp_Sort [lsort -decreasing -integer -index 2 $hunters_And_Xp]
             
-			set x 0
-             
-			::DuckHunt::display_output loglev - -  "Get top 5"              
-			while {$x<5} {		
-				if { $x < 4 && $x < $num_hunters-1 } {
+			set x 0             
+			::DuckHunt::display_output loglev - -  "Get top $topListLen"              
+			while {$x<$topListLen} {		
+				if { $x < $topListLen-1 && $x < $num_hunters-1 } then {
 					lappend TopHunters "[lindex $hunters_And_Xp_Sort $x] \00314|\003"
 				} else {
 					lappend TopHunters "[lindex $hunters_And_Xp_Sort $x]"
@@ -1646,18 +1859,10 @@ proc ::DuckHunt::display_topDuck {nick host hand chan arg} {
 			}
         }
 
-		if {$TopHunters ne ""} {
-			if { $::DuckHunt::preferred_display_mode == 1 } {
-				set output_method "PRIVMSG"
-				set output_target $chan
-			} else {
-				set output_method "NOTICE"
-				set output_target $nick
-			}
-			
+		if {$TopHunters ne ""} then {			
 			putloglev o * "The top duck(s) are: [join $TopHunters]"
 			#::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
-			::DuckHunt::display_output help $output_method $output_target  "The top duck(s) are: [join $TopHunters]"
+			::DuckHunt::display_output help $output_method $output_target  "The top duck(s) in $targetChan by $actionTypeMsg are: [join $TopHunters]"
 		}
         ::DuckHunt::purge_db_from_memory
 
@@ -1695,7 +1900,7 @@ proc ::DuckHunt::display_duckHelp {nick host hand chan arg} {
 			set output_target $nick
 		}
 		
-		set helpMsg "\00314\[Duck Hunt commands\]\003 !help, !bang, !reload, !shop, !topduck, !duckstats, !lastduck"
+		set helpMsg "\00314\[Duck Hunt commands\]\003 !help, !bang, !reload, !shop, !topduck, !duckstats, !lastduck.\nFor more details PRIVMSG me 'help'"
 		
 		#::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
 		::DuckHunt::display_output help $output_method $output_target  $helpMsg
@@ -1706,129 +1911,129 @@ proc ::DuckHunt::display_duckHelp {nick host hand chan arg} {
 }
 
  ###############################################################################
-### !duckstats [nick] : Affiche ses stats ou celles d'un autre.
+### !duckstats [nick] : Displays their stats or those of another.
  ###############################################################################
 proc ::DuckHunt::display_stats {nick host hand chan arg} {
 
-	set lower_nick [::tcl::string::tolower $nick]
+    set lower_nick [::tcl::string::tolower $nick]
 
-	if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
-		variable canNickFlood 0
-	} else {
-		 variable canNickFlood $::DuckHunt::antiflood
-	}
-	
-	if {
-		(![channel get $chan DuckHunt])
-		|| ($hand in $::DuckHunt::blacklisted_handles)
-		|| (($canNickFlood == 1)
-		&& (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::stat_cmd $::DuckHunt::flood_stats])
-		|| ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
-	} then {
-		return
-	} else {
-		if { [set arg [::tcl::string::trim $arg]] ne "" } {
-			set target $arg
-			set lower_target [::tcl::string::tolower $arg]
-		} else {
-			set target $nick
-			set lower_target [::tcl::string::tolower $nick]
-		}
-		::DuckHunt::read_database
-		::DuckHunt::ckeck_for_pending_rename $chan $target $lower_target [md5 "$chan,$lower_target"]
-		foreach varname {gun jammed current_ammo_clip remaining_ammo_clips xp ducks_shot golden_ducks_shot missed_shots empty_shots humans_shot wild_shots bullets_received deflected_bullets deaths confiscated_weapons jammed_weapons best_time cumul_reflex_time items} {
-			set $varname [::DuckHunt::get_data $lower_target $chan $varname]
-		}
-		# Aucune entr�e n'existe � ce nom dans la base de donn�es, on prend les
-		# valeurs par d�faut.
-		if {
-			!([::tcl::dict::exists $::DuckHunt::player_data $chan])
-			|| !([::tcl::dict::exists $::DuckHunt::player_data $chan $lower_target])
-		} then {
-			lassign [::DuckHunt::get_level_and_grantings 0] level required_xp accuracy deflection defense jamming ammos_per_clip ammo_clips {} {} {}
-		# Il existe une entr�e pour ce joueur dans la base de donn�es.
-		} else {
-			lassign [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_target $chan "xp"]] level required_xp accuracy deflection defense jamming ammos_per_clip ammo_clips {} {} {}
-		}
-		set rank [::DuckHunt::lvl2rank $level]
-		set neutralized_bullets [expr {$bullets_received - $deaths - $deflected_bullets}]
-		set reliability [expr {100 - $jamming}]
-		# Le joueur a graiss� son arme.
-		if { [lindex [::DuckHunt::get_item_info $lower_target $chan "6"] 0] != -1 } {
-			append reliability_modifier "\00303+[expr {int((100 - $reliability) / 2)}]%\003"
-		} else {
-			append reliability_modifier ""
-		}
-		# Le joueur a du sable dans son arme.
-		if { [lindex [::DuckHunt::get_item_info $lower_target $chan "15"] 0] != -1 } {
-			append reliability_modifier "\00304-[expr {int($reliability / 2)}]%\003"
-		} else {
-			append reliability_modifier ""
-		}
-		if { $best_time == -1 } {
-			set best_time "-"
-		} else {
-			set best_time [::DuckHunt::adapt_time_resolution [::tcl::string::map {"." ""} $best_time] 1]
-		}
-		if { $ducks_shot != 0 } {
-			set average_reflex_time [::DuckHunt::adapt_time_resolution [::tcl::string::map {"." ""} [format "%.3f" [expr {($cumul_reflex_time / 1000.0) / $ducks_shot}]]] 1]
-		} else {
-			set average_reflex_time "-"
-		}
-		if { $jammed == 1 } {
-			# Texte : "\00304oui\003"
-			set jammed [::msgcat::mc m37]
-		} else {
-			# Texte : "non"
-			set jammed [::msgcat::mc m38]
-		}
-		if { $gun <= 0 } {
-			# Texte : "\00304oui\003"
-			set confiscated [::msgcat::mc m37]
-		} else {
-			# Texte : "non"
-			set confiscated [::msgcat::mc m38]
-		}
-		set xp_to_lvlup [expr {$required_xp - $xp}]
-		set total_fired_ammo [expr {$ducks_shot + $missed_shots}]
-		if { $total_fired_ammo != 0 } {
-			set effective_accuracy "[expr {(100 * $ducks_shot) / $total_fired_ammo}]%"
-		} else {
-			set effective_accuracy "-"
-		}
-		# Le joueur est �bloui.
-		if { [set item_index [lindex [::DuckHunt::get_item_info $lower_target $chan "14"] 0]] != -1 } {
-			append accuracy_modifier "\00304-[expr {int($accuracy / 2)}]%\003"
-		} else {
-			append accuracy_modifier ""
-		}
-		# Le joueur a install� une lunette de vis�e sur son arme.
-		if { [set item_index [lindex [::DuckHunt::get_item_info $lower_target $chan "7"] 0]] != -1 } {
-			append accuracy_modifier "\00303+[expr {int((100 - $accuracy) / 3)}]%\003"
-		} else {
-			append accuracy_modifier ""
-		}
-		set items_list ""
-		set effects_list ""
-		# Texts: "Mun. AP" "Mun. expl." "Grease" "Riflescope" "Infrared Detector" "Silencer" "4 Leaf Clover" "Sunglasses" "Life Ass." "Civilian Resp. Ass." ducks" "Dazzled" "Sand" "Drenched" "Hooded"
-		set item_names [list 3 [::msgcat::mc m370] 4 [::msgcat::mc m371] 6 [::msgcat::mc m372] 7 [::msgcat::mc m373] 8 [::msgcat::mc m374] 9 [::msgcat::mc m375] 10 [::msgcat::mc m376] 11 [::msgcat::mc m377] 14 [::msgcat::mc m381] 15 [::msgcat::mc m382] 16 [::msgcat::mc m383] 17 [::msgcat::mc m384] 18 [::msgcat::mc m378] 19 [::msgcat::mc m379] 22 [::msgcat::mc m380]]
-		foreach item $items {
-			if { [set item_id [lindex $item 1]] in {3 4 6 7 8 9 10 11 18 19 22} } {
-				lappend items_list [::tcl::dict::get $item_names $item_id]
-			} elseif { $item_id in {14 15 16 17} } {
-				lappend effects_list [::tcl::dict::get $item_names $item_id]
-			}
-		}
-		if { $items_list ne "" } {
-			# Texte : "\00307\002  \[\037Inventaire\037\]\002\003  %s"
-			set items_list [::msgcat::mc m385 [join $items_list " \00314/\003 "]]
-		}
-		if { $effects_list ne "" } {
-			# Texte : "\00307\002  \[\037Effets\037\]\002\003  %s"
-			set effects_list [::msgcat::mc m386 [join $effects_list " \00314/\003 "]]
-		}
-		set karma [::DuckHunt::calculate_karma $wild_shots $humans_shot $ducks_shot 0]
-		# Message : "\00307\002\[\037Arme\037\]\002\003  mun. : %s \00307|\003 charg. : %s \00307|\003 enray. : %s (%s fois) \00307|\003 confisq. : %s (%s fois)\00307\002  \[\037Profil\037\]\002\003  %s XP \00307|\003 lvl %s (%s) / encore %s %s d'XP avant lvl sup. \00307|\003 karma : %s  \00307\002\[\037Stats\037\]\002\003  pr�cision th�or. : %s%%%s \00307|\003 effic. tirs : %s \00307|\003 fiabilit� arme : %s%%%s \00307|\003 armure : %s%% \00307|\003 d�flexion : %s%%\n\00307\002\[\037Tableau de chasse\037\]\002\003  meill. tps. : %s \00307|\003 tps. r�act. moyen : %s \00307|\003 %s %s (dont %s %s) \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s  \00307\002\[\037Accidents\037\]\002\003  re�u %s %s dont %s %s, %s %s et %s %s. "
+    if { [matchattr $hand $::DuckHunt::launch_auth $chan] } then {
+        variable canNickFlood 0
+    } else {
+         variable canNickFlood $::DuckHunt::antiflood
+    }
+    
+    if {
+        (![channel get $chan DuckHunt])
+        || ($hand in $::DuckHunt::blacklisted_handles)
+        || (($canNickFlood == 1)
+        && (([::DuckHunt::antiflood $nick $chan "nick" $::DuckHunt::stat_cmd $::DuckHunt::flood_stats])
+        || ([::DuckHunt::antiflood $nick $chan "chan" "*" $::DuckHunt::flood_global])))
+    } then {
+        return
+    } else {
+        if { [set arg [::tcl::string::trim $arg]] ne "" } {
+            set target $arg
+            set lower_target [::tcl::string::tolower $arg]
+        } else {
+            set target $nick
+            set lower_target [::tcl::string::tolower $nick]
+        }
+        ::DuckHunt::read_database
+        ::DuckHunt::ckeck_for_pending_rename $chan $target $lower_target [md5 "$chan,$lower_target"]
+        foreach varname {gun jammed current_ammo_clip remaining_ammo_clips xp ducks_shot golden_ducks_shot missed_shots empty_shots humans_shot wild_shots bullets_received deflected_bullets deaths confiscated_weapons jammed_weapons best_time cumul_reflex_time items} {
+            set $varname [::DuckHunt::get_data $lower_target $chan $varname]
+        }
+        # No entry exists for this name in the database, we take the
+        # default values.
+        if {
+            !([::tcl::dict::exists $::DuckHunt::player_data $chan])
+            || !([::tcl::dict::exists $::DuckHunt::player_data $chan $lower_target])
+        } then {
+            lassign [::DuckHunt::get_level_and_grantings 0] level required_xp accuracy deflection defense jamming ammos_per_clip ammo_clips {} {} {}
+        # There is an entry for this player in the database.
+        } else {
+            lassign [::DuckHunt::get_level_and_grantings [::DuckHunt::get_data $lower_target $chan "xp"]] level required_xp accuracy deflection defense jamming ammos_per_clip ammo_clips {} {} {}
+        }
+        set rank [::DuckHunt::lvl2rank $level]
+        set neutralized_bullets [expr {$bullets_received - $deaths - $deflected_bullets}]
+        set reliability [expr {100 - $jamming}]
+        # The player has greased his weapon.
+        if { [lindex [::DuckHunt::get_item_info $lower_target $chan "6"] 0] != -1 } {
+            append reliability_modifier "\00303+[expr {int((100 - $reliability) / 2)}]%\003"
+        } else {
+            append reliability_modifier ""
+        }
+        # The player has sand in his weapon.
+        if { [lindex [::DuckHunt::get_item_info $lower_target $chan "15"] 0] != -1 } {
+            append reliability_modifier "\00304-[expr {int($reliability / 2)}]%\003"
+        } else {
+            append reliability_modifier ""
+        }
+        if { $best_time == -1 } {
+            set best_time "-"
+        } else {
+            set best_time [::DuckHunt::adapt_time_resolution [::tcl::string::map {"." ""} $best_time] 1]
+        }
+        if { $ducks_shot != 0 } {
+            set average_reflex_time [::DuckHunt::adapt_time_resolution [::tcl::string::map {"." ""} [format "%.3f" [expr {($cumul_reflex_time / 1000.0) / $ducks_shot}]]] 1]
+        } else {
+            set average_reflex_time "-"
+        }
+        if { $jammed == 1 } {
+            # Text: "\00304yes\003"
+            set jammed [::msgcat::mc m37]
+        } else {
+            # Text: "no"
+            set jammed [::msgcat::mc m38]
+        }
+        if { $gun <= 0 } {
+            # Text: "\00304yes\003"
+            set confiscated [::msgcat::mc m37]
+        } else {
+            # Text: "no"
+            set confiscated [::msgcat::mc m38]
+        }
+        set xp_to_lvlup [expr {$required_xp - $xp}]
+        set total_fired_ammo [expr {$ducks_shot + $missed_shots}]
+        if { $total_fired_ammo != 0 } {
+            set effective_accuracy "[expr {(100 * $ducks_shot) / $total_fired_ammo}]%"
+        } else {
+            set effective_accuracy "-"
+        }
+        # The player is dazzled.
+        if { [set item_index [lindex [::DuckHunt::get_item_info $lower_target $chan "14"] 0]] != -1 } {
+            append accuracy_modifier "\00304-[expr {int($accuracy / 2)}]%\003"
+        } else {
+            append accuracy_modifier ""
+        }
+        # The player has installed a riflescope on his weapon.
+        if { [set item_index [lindex [::DuckHunt::get_item_info $lower_target $chan "7"] 0]] != -1 } {
+            append accuracy_modifier "\00303+[expr {int((100 - $accuracy) / 3)}]%\003"
+        } else {
+            append accuracy_modifier ""
+        }
+        set items_list ""
+        set effects_list ""
+        # Texts: "AP Ammo" "Expl. Ammo" "Grease" "Riflescope" "Infrared Detector" "Silencer" "4 Leaf Clover" "Sunglasses" "Life Ass." "Civilian Resp. Ass." ducks" "Dazzled" "Sand" "Drenched" "Hooded"
+        set item_names [list 3 [::msgcat::mc m370] 4 [::msgcat::mc m371] 6 [::msgcat::mc m372] 7 [::msgcat::mc m373] 8 [::msgcat::mc m374] 9 [::msgcat::mc m375] 10 [::msgcat::mc m376] 11 [::msgcat::mc m377] 14 [::msgcat::mc m381] 15 [::msgcat::mc m382] 16 [::msgcat::mc m383] 17 [::msgcat::mc m384] 18 [::msgcat::mc m378] 19 [::msgcat::mc m379] 22 [::msgcat::mc m380]]
+        foreach item $items {
+            if { [set item_id [lindex $item 1]] in {3 4 6 7 8 9 10 11 18 19 22} } {
+                lappend items_list [::tcl::dict::get $item_names $item_id]
+            } elseif { $item_id in {14 15 16 17} } {
+                lappend effects_list [::tcl::dict::get $item_names $item_id]
+            }
+        }
+        if { $items_list ne "" } {
+            # Text: "\00307\002\[\037Inventory\037\]\002\003  %s"
+            set items_list [::msgcat::mc m385 [join $items_list " \00314/\003 "]]
+        }
+        if { $effects_list ne "" } {
+            # Text: "\00307\002\[\037Effects\037\]\002\003  %s"
+            set effects_list [::msgcat::mc m386 [join $effects_list " \00314/\003 "]]
+        }
+        set karma [::DuckHunt::calculate_karma $wild_shots $humans_shot $ducks_shot 0]
+        # Message: "\00307\002\[\037Weapon\037\]\002\003  ammo: %s \00307|\003 clips: %s \00307|\003 jammed: %s (%s times) \00307|\003 confiscated: %s (%s times)\00307\002 \[\037Profile\037\]\002\003  %s XP \00307|\003 lvl %s (%s) / still %s %s XP before next level \00307|\003 karma: %s  \00307\002\[\037Stats\037\]\002\003  theoretical accuracy: %s%%%s \00307|\003 shot efficiency: %s \00307|\003 fiabilit� arme : %s%%%s \00307|\003 armure : %s%% \00307|\003 d�flexion : %s%%\n\00307\002\[\037Tableau de chasse\037\]\002\003  meill. tps. : %s \00307|\003 tps. r�act. moyen : %s \00307|\003 %s %s (dont %s %s) \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s \00307|\003 %s %s  \00307\002\[\037Accidents\037\]\002\003  re�u %s %s dont %s %s, %s %s et %s %s. "
 		# Textes : "pt" "pts" "canard" "canards" "tir manqu�" "tirs manqu�s" "accident" "accidents" "tir � vide" "tirs � vide" "tir sauvage" "tirs sauvages" "mun. utilis." "mun. utilis." "balle perdue" "balles perdues" "l�thale" "l�thales" "a ricoch�" "ont ricoch�" "a �t� encaiss�e" "ont �t� encaiss�es"
 		if { $::DuckHunt::preferred_display_mode == 1 } {
 			set output_method "PRIVMSG"
@@ -1836,10 +2041,7 @@ proc ::DuckHunt::display_stats {nick host hand chan arg} {
 		} else {
 			set output_method "NOTICE"
 			set output_target $nick
-		}
-
-		# set output_method "PRIVMSG"
-		# set output_target $nick		
+		}	
 
 		#::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
 		::DuckHunt::display_output help $output_method $output_target  "Hunting stats for $lower_target: [::msgcat::mc m42 [::DuckHunt::display_ammo $lower_target $chan $ammos_per_clip] [::DuckHunt::display_clips $lower_target $chan $ammo_clips] $jammed $jammed_weapons $confiscated $confiscated_weapons [::DuckHunt::colorize_value $xp] $level $rank $xp_to_lvlup [::DuckHunt::plural [expr {$required_xp - $xp}] [::msgcat::mc m43] [::msgcat::mc m44]] $karma $accuracy $accuracy_modifier $effective_accuracy $reliability $reliability_modifier $defense $deflection $best_time $average_reflex_time $ducks_shot [::DuckHunt::plural $ducks_shot [::msgcat::mc m45] [::msgcat::mc m46]] $golden_ducks_shot [::DuckHunt::plural $golden_ducks_shot [::msgcat::mc m274] [::msgcat::mc m275]] $missed_shots [::DuckHunt::plural $missed_shots [::msgcat::mc m47] [::msgcat::mc m48]] $humans_shot [::DuckHunt::plural $humans_shot [::msgcat::mc m49] [::msgcat::mc m50]] $empty_shots [::DuckHunt::plural $empty_shots [::msgcat::mc m51] [::msgcat::mc m52]] $wild_shots [::DuckHunt::plural $wild_shots [::msgcat::mc m53] [::msgcat::mc m54]] $total_fired_ammo [::DuckHunt::plural $total_fired_ammo [::msgcat::mc m55] [::msgcat::mc m56]] $bullets_received [::DuckHunt::plural $bullets_received [::msgcat::mc m57] [::msgcat::mc m58]] $deaths [::DuckHunt::plural $deaths [::msgcat::mc m59] [::msgcat::mc m60]] $deflected_bullets [::DuckHunt::plural $deflected_bullets [::msgcat::mc m61] [::msgcat::mc m62]] $neutralized_bullets [::DuckHunt::plural $neutralized_bullets [::msgcat::mc m63] [::msgcat::mc m64]]]${items_list}$effects_list "
@@ -4516,7 +4718,7 @@ proc ::DuckHunt::help_cmd {nick host hand arg} {
         ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::reload_cmd:\002\003 Reloads or unjams your weapon. You must have chargers left if you want to reload. They are given back for free everyday, but you can also buy them in the shop."
         ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::lastduck_pub_cmd:\002\003 	Displays the last seen duck"
         ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::stat_cmd:\002\003 Gets your or another player hunting statistics."
-        ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::topDuck_cmd:\002\003 Shows the top 5 players."
+        ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::topDuck_cmd:\002\003 Shows the top 5 players by xp in that channel by default. \nPossible arguments, \n'top#' where the # is the # of players to return \n'#channel' to return a different channels topduck \n'ducks' to get the list of players with the most ducks shot"
         ::DuckHunt::display_output help $output_method $nick "\002\00310$::DuckHunt::shop_cmd:\002\003 You can buy objects with the command !shop {item number} {possible arguments, such as the @target nickname} You need to have enough exp to buy an item."
     }
 	
@@ -4670,15 +4872,19 @@ if { $::DuckHunt::shop_enabled } {
 bind pub $::DuckHunt::unarm_auth $::DuckHunt::unarm_cmd ::DuckHunt::unarm
 bind pub $::DuckHunt::unarm_auth $::DuckHunt::unarm_cmd2 ::DuckHunt::unarm
 bind pub $::DuckHunt::rearm_auth $::DuckHunt::rearm_cmd ::DuckHunt::rearm
+bind pub $::DuckHunt::allStats_auth $::DuckHunt::allStats_cmd ::DuckHunt::display_allStats
 bind msg $::DuckHunt::findplayer_auth $::DuckHunt::findplayer_cmd ::DuckHunt::findplayer
+bind msg $::DuckHunt::allStats_auth $::DuckHunt::allStats_cmd ::DuckHunt::display_allStatsPM
 bind msg $::DuckHunt::fusion_auth $::DuckHunt::fusion_cmd ::DuckHunt::fusion
 bind msg $::DuckHunt::rename_auth $::DuckHunt::rename_cmd ::DuckHunt::rename_player
 bind msg $::DuckHunt::delete_auth $::DuckHunt::delete_cmd ::DuckHunt::delete_player
 bind msg $::DuckHunt::launch_auth $::DuckHunt::launch_cmd ::DuckHunt::launch
 bind msg $::DuckHunt::export_auth $::DuckHunt::export_cmd ::DuckHunt::export_players_table
-bind nick -|- * ::DuckHunt::nickchange_tracking
-bind part -|- * ::DuckHunt::update_nickchange_tracking
-bind sign -|- * ::DuckHunt::update_nickchange_tracking
+if { $::DuckHunt::nick_tracking_enabled } {
+	bind nick -|- * ::DuckHunt::nickchange_tracking
+	bind part -|- * ::DuckHunt::update_nickchange_tracking
+	bind sign -|- * ::DuckHunt::update_nickchange_tracking
+}
 
 
 #	Message : "%s v%s (�2015-2016 Menz Agitat) a �t� charg�."
