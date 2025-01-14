@@ -17,7 +17,7 @@ Installing
 
 
 
-Ver 2.16.20250102
+Ver 0.2.16.20250102
 -----
 * Added option to turn on/off nick tracking 'nick_tracking_enabled'
 * New topduck options
@@ -25,7 +25,7 @@ Ver 2.16.20250102
   - '#channel' to return a different channels topduck 
   - 'ducks' to get the list of players with the most ducks shot
   
-Ver 2.16.20230823
+Ver 0.2.16.20230823
 -----
 * Small fix to block anyone from acting like the relay bot.
   
